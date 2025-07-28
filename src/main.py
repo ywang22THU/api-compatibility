@@ -72,6 +72,7 @@ def traverse_ast(cursor: clang.cindex.Cursor, api_data: dict, filename: str):
         traverse_ast(child, api_data, filename)
 
 def extract_function_info(cursor: clang.cindex.Cursor) -> dict[str, Any]:
+    """Extract function information"""
     return {
         "name": cursor.spelling,
         "return_type": cursor.result_type.spelling,
@@ -86,6 +87,7 @@ def extract_function_info(cursor: clang.cindex.Cursor) -> dict[str, Any]:
     }
 
 def extract_class_info(cursor: clang.cindex.Cursor) -> dict[str, Any]:
+    """Extract class information"""
     class_info = {
         "name": cursor.spelling,
         "bases": [
@@ -120,6 +122,7 @@ def extract_class_info(cursor: clang.cindex.Cursor) -> dict[str, Any]:
     return class_info
 
 def extract_enum_info(cursor: clang.cindex.Cursor) -> dict[str, Any]:
+    """Extract enum information"""
     return {
         "name": cursor.spelling,
         "enumerators": [
@@ -130,20 +133,24 @@ def extract_enum_info(cursor: clang.cindex.Cursor) -> dict[str, Any]:
     }
 
 def extract_macro_info(cursor: clang.cindex.Cursor) -> dict[str, str]:
+    """Extract macro definition information"""
     return {
         "name": cursor.spelling,
         "definition": " ".join([t.spelling for t in cursor.get_tokens()][1:])
     }
 
 def get_access_specifier(cursor: clang.cindex.Cursor) -> str:
+    """Get the access specifier"""
     return cursor.access_specifier.name if hasattr(cursor, 'access_specifier') else "PUBLIC"
 
 def get_exception_spec(cursor: clang.cindex.Cursor) -> str:
+    """Get the exception specification"""
     if cursor.exception_specification_kind == clang.cindex.ExceptionSpecificationKind.NONE:
         return ""
     return cursor.type.spelling.split(")")[1].strip()
 
 def get_visibility(cursor: clang.cindex.Cursor) -> str:
+    """Get the visibility attributes: default, hidden."""
     for child in cursor.get_children():
         if child.kind == clang.cindex.CursorKind.VISIBILITY_ATTR:
             return "default"
