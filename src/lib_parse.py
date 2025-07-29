@@ -10,8 +10,8 @@ CLANG_PATH = '/usr/lib/llvm-14/lib/libclang.so'
 def parse_args():
     parser = argparse.ArgumentParser(description="Parse C++ library headers and extract API information.")
     parser.add_argument('--root_path', type=str, help='The root path of the C++ library containing header files.')
-    parser.add_argument('--compile_flags', nargs='*', default=['-std=c++14'], help='Compilation flags to use when parsing headers.')
     parser.add_argument('--output_path', type=str, default='api_data.json', help='Output file path for the extracted API data.')
+    parser.add_argument('--compile_flags', nargs=argparse.REMAINDER, default=['-std=c++14'], help='Compilation flags to use when parsing headers.')
     return parser.parse_args()
 
 def parse_library(root_path: str, compile_flags: list[str], output_path: str):
@@ -36,9 +36,13 @@ def parse_library(root_path: str, compile_flags: list[str], output_path: str):
     api_data = defaultdict(lambda: defaultdict(list))
     
     for header in header_files:
+        print("Parsing header:", header)
         # 解析每个头文件
-        tu = index.parse(header, args=compile_flags)
-        traverse_ast(tu.cursor, api_data, header)
+        try:
+            tu = index.parse(header, args=compile_flags)
+            traverse_ast(tu.cursor, api_data, header)
+        except clang.cindex.TranslationUnitLoadError as e:
+            print(e)
     
     # 转换为可序列化结构
     serializable_data = {
