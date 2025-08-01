@@ -573,8 +573,7 @@ def main():
     parser.add_argument('v1_api', help='Path to the first version API JSON file')
     parser.add_argument('v2_api', help='Path to the second version API JSON file')
     parser.add_argument('-o', '--output', help='Output report file path (optional)')
-    parser.add_argument('--format', choices=['text', 'json'], default='text', 
-                       help='Output format (text or json)')
+    parser.add_argument('--format', choices=['text', 'json'], default='json', help='Output format (text or json)')
     
     args = parser.parse_args()
     
