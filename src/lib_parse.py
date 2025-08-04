@@ -15,13 +15,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Parse C++ library headers and extract API information.")
     parser.add_argument('--root_path', type=str, required=True, help='The root path of the C++ library containing header files.')
     parser.add_argument('--output_path', type=str, default='api_data.json', help='Output file path for the extracted API data.')
-    parser.add_argument('--compile_flags', nargs=argparse.REMAINDER, default=None, help='Manual compilation flags to use when parsing headers.')
     parser.add_argument('--build_system', choices=['auto', 'make', 'cmake', 'manual'], default='auto', 
                        help='Build system to use for extracting compile flags.')
     parser.add_argument('--build_dir', type=str, default=None, help='Build directory (for CMake projects).')
     parser.add_argument('--target', type=str, default=None, help='Specific target to analyze (for Make/CMake).')
     parser.add_argument('--cmake_args', nargs='*', default=[], help='Additional CMake arguments.')
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output.')
+    parser.add_argument('--compile_flags', nargs=argparse.REMAINDER, default=None, help='Manual compilation flags to use when parsing headers.')
     return parser.parse_args()
 
 def detect_build_system(root_path: str) -> str:
