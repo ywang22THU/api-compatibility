@@ -28,21 +28,61 @@
   - WARNING级别：可能影响功能的变更
   - INFO级别：信息性变更，通常是新增功能
 - 生成详细的兼容性分析报告
-
+- 
 ## 使用方法
 
-### 1. 解析C++头文件
+### 解析C++头文件
+
+#### 基本用法
 
 ```bash
 python src/lib_parse.py --root_path /path/to/cpp/library --output_path api_v1.json
 ```
 
-参数说明：
-- `--root_path`: C++库的根目录路径，包含头文件
-- `--output_path`: 输出的JSON文件路径（默认：api_data.json）
-- `--compile_flags`: 编译标志（默认：-std=c++14）
+#### 自动检测构建系统
+```bash
+python src/lib_parse.py --root_path /path/to/cpp/library --build_system auto --output_path api_v1.json
 
-### 2. 分析API兼容性
+# 使用CMake
+python src/lib_parse.py --root_path /path/to/cpp/library --build_system cmake --build_dir build --output_path api_v1.json
+
+# 使用Make
+python src/lib_parse.py --root_path /path/to/cpp/library --build_system make --target all --output_path api_v1.json
+```
+
+#### 手动指定编译参数
+```bash
+python src/lib_parse.py --root_path /path/to/cpp/library --build_system manual --compile_flags -std=c++17 -I/usr/include/custom -DDEBUG
+```
+
+参数说明：
+- `--root_path`: C++库的根目录路径，包含头文件（必需）
+- `--output_path`: 输出的JSON文件路径（默认：api_data.json）
+- `--build_system`: 构建系统类型，支持 `auto`（默认）、`cmake`、`make`、`manual`
+- `--build_dir`: 构建目录，用于CMake项目（默认：{root_path}/build）
+- `--target`: 特定目标，用于Make/CMake项目
+- `--cmake_args`: 额外的CMake参数
+- `--compile_flags`: 手动编译标志（当build_system为manual时有效）
+- `--verbose`: 启用详细输出
+
+#### 支持的构建系统
+
+1. CMake项目
+   - 自动运行 `cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`
+   - 从 `compile_commands.json` 提取编译参数
+   - 支持指定构建目录和CMake参数
+
+2. Makefile项目  
+   - 运行 `make -n` 获取编译命令
+   - 解析Makefile中的CXXFLAGS、INCLUDES等变量
+   - 支持指定特定目标
+
+3. 自动检测
+   - 检查项目根目录中的 CMakeLists.txt 或 Makefile
+   - 自动选择合适的构建系统
+   - 支持多种构建系统（Gradle、Meson、Autotools等）
+
+### 分析API兼容性
 
 ```bash
 python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibility_report.json
@@ -53,7 +93,6 @@ python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibilit
 - `api_v2.json`: 第二个版本的API JSON文件
 - `-o, --output`: 输出报告文件路径（可选，默认 `stdout`）
 - `--format`: 输出格式，支持 `text` 或 `json`（默认）
-
 
 ## 支持的兼容性检查
 
