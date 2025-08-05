@@ -52,7 +52,19 @@ python src/lib_parse.py --root_path /path/to/cpp/library --build_system make --t
 
 #### 手动指定编译参数
 ```bash
-python src/lib_parse.py --root_path /path/to/cpp/library --build_system manual --compile_flags -std=c++17 -I/usr/include/custom -DDEBUG
+python src/lib_parse.py --root_path /path/to/cpp/library --build_system manual --compile_flags -std=c++17 -I /usr/include/custom -DDEBUG
+```
+
+#### 排除特定目录
+```bash
+# 使用默认排除目录（3rdparty, tests, icons等）
+python src/lib_parse.py --root_path /path/to/cpp/library --output_path api_v1.json
+
+# 自定义排除目录
+python src/lib_parse.py --root_path /path/to/cpp/library --exclude_dirs 3rdparty tests build --output_path api_v1.json
+
+# 不排除任何目录
+python src/lib_parse.py --root_path /path/to/cpp/library --exclude_dirs --output_path api_v1.json
 ```
 
 参数说明：
@@ -63,6 +75,7 @@ python src/lib_parse.py --root_path /path/to/cpp/library --build_system manual -
 - `--target`: 特定目标，用于Make/CMake项目
 - `--cmake_args`: 额外的CMake参数
 - `--compile_flags`: 手动编译标志（当build_system为manual时有效）
+- `--exclude_dirs`: 要排除的目录名称列表（默认：['3rdparty', 'third_party', 'thirdparty', 'icons', 'tests', 'test', 'examples', 'example', 'docs', 'doc', 'build', 'cmake-build-debug', 'cmake-build-release', '.git', '.vscode', '__pycache__']）
 - `--verbose`: 启用详细输出
 
 #### 支持的构建系统

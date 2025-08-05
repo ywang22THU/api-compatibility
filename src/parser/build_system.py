@@ -36,7 +36,7 @@ class BuildSystemDetector:
         if (root / 'meson.build').exists():
             return 'meson'
         
-        if (root / 'configure.ac').exists() or (root / 'configure.in').exists():
+        if (root / 'configure.ac').exists() or (root / 'configure.in').exists() or (root / 'configure').exists():
             return 'autotools'
         
         return 'manual'

@@ -60,6 +60,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help='Manual compilation flags to use when parsing headers (use with --build_system manual).'
     )
     
+    parser.add_argument(
+        '--exclude_dirs', 
+        nargs='+', 
+        default=['3rdparty', 'third_party', 'thirdparty', 'icons', 'tests', 'test', 'examples', 'example', 'docs', 'doc', 'build', 'cmake-build-debug', 'cmake-build-release', '.git', '.vscode', '__pycache__'],
+        help='Directories to exclude when searching for header files (default: common directories like 3rdparty, tests, etc.).'
+    )
+    
     return parser
 
 

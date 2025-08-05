@@ -13,17 +13,20 @@ from .build_system import BuildSystemDetector
 from .clang_utils import ClangUtils
 from .ast_extractor import ASTExtractor
 
+DEFAULT_EXCLUDE_DIRS = ['3rdparty', 'third_party', 'thirdparty', 'icons', 'tests', 'test', 'examples', 'example', 'docs', 'doc', 'build', 'cmake-build-debug', 'cmake-build-release', '.git', '.vscode', '__pycache__']
 
 class APIParser:
     """Main parser class for extracting API information from C++ libraries."""
     
-    def __init__(self, verbose: bool = False):
+    def __init__(self, verbose: bool = False, exclude_dirs: List[str] = None):
         """Initialize the API parser.
         
         Args:
             verbose: Enable verbose output
+            exclude_dirs: List of directory names to exclude from header file search
         """
         self.verbose = verbose
+        self.exclude_dirs = exclude_dirs or DEFAULT_EXCLUDE_DIRS
         self.build_detector = BuildSystemDetector()
         self.clang_utils = ClangUtils()
         self.ast_extractor = ASTExtractor()
@@ -118,12 +121,28 @@ class APIParser:
         return self.parse_library(root_path, compile_flags, output_path)
     
     def _find_header_files(self, root_path: str) -> List[str]:
-        """Find all header files in the given directory."""
+        """Find all header files in the given directory, excluding specified directories."""
         header_files = []
-        for root, _, files in os.walk(root_path):
+        
+        if self.verbose:
+            print(f"Excluding directories: {self.exclude_dirs}")
+        
+        for root, dirs, files in os.walk(root_path):
+            # Remove excluded directories from dirs to prevent os.walk from entering them
+            dirs[:] = [d for d in dirs if d not in self.exclude_dirs]
+            
+            # Also check if current directory path contains any excluded directory
+            relative_path = os.path.relpath(root, root_path)
+            if any(excluded_dir in relative_path.split(os.sep) for excluded_dir in self.exclude_dirs):
+                continue
+            
             for file in files:
                 if file.endswith(('.h', '.hh', '.hpp', '.hxx')):
-                    header_files.append(os.path.join(root, file))
+                    full_path = os.path.join(root, file)
+                    header_files.append(full_path)
+                    if self.verbose:
+                        print(f"Found header file: {full_path}")
+        
         return header_files
     
     def _save_api_data(self, api_data: dict, output_path: str):

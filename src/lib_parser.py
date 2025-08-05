@@ -12,7 +12,7 @@ def main():
         args = parse_arguments()
         
         # Create and configure the parser
-        api_parser = APIParser(verbose=args.verbose)
+        api_parser = APIParser(verbose=args.verbose, exclude_dirs=args.exclude_dirs)
         
         # Parse the library
         success = api_parser.parse_with_build_system(
