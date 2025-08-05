@@ -137,7 +137,7 @@ class APIParser:
                 continue
             
             for file in files:
-                if file.endswith(('.h', '.hh', '.hpp', '.hxx')):
+                if file.endswith(('.h', '.hh', '.hpp', '.hxx')) and not file.endswith('_p.h'):
                     full_path = os.path.join(root, file)
                     header_files.append(full_path)
                     if self.verbose:
