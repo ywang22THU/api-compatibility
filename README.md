@@ -39,22 +39,6 @@
 python src/lib_parse.py --root_path /path/to/cpp/library --output_path api_v1.json
 ```
 
-#### 自动检测构建系统
-```bash
-python src/lib_parse.py --root_path /path/to/cpp/library --build_system auto --output_path api_v1.json
-
-# 使用CMake
-python src/lib_parse.py --root_path /path/to/cpp/library --build_system cmake --build_dir build --output_path api_v1.json
-
-# 使用Make
-python src/lib_parse.py --root_path /path/to/cpp/library --build_system make --target all --output_path api_v1.json
-```
-
-#### 手动指定编译参数
-```bash
-python src/lib_parse.py --root_path /path/to/cpp/library --build_system manual --compile_flags -std=c++17 -I /usr/include/custom -DDEBUG
-```
-
 #### 排除特定目录
 ```bash
 # 使用默认排除目录（3rdparty, tests, icons等）
@@ -70,13 +54,8 @@ python src/lib_parse.py --root_path /path/to/cpp/library --exclude_dirs --output
 参数说明：
 - `--root_path`: C++库的根目录路径，包含头文件（必需）
 - `--output_path`: 输出的JSON文件路径（默认：api_data.json）
-- `--build_system`: 构建系统类型，支持 `auto`（默认）、`cmake`、`make`、`manual`
-- `--build_dir`: 构建目录，用于CMake项目（默认：{root_path}/build）
-- `--target`: 特定目标，用于Make/CMake项目
-- `--cmake_args`: 额外的CMake参数
-- `--compile_flags`: 手动编译标志（当build_system为manual时有效）
 - `--exclude_dirs`: 要排除的目录名称列表（默认：['3rdparty', 'third_party', 'thirdparty', 'icons', 'tests', 'test', 'examples', 'example', 'docs', 'doc', 'build', 'cmake-build-debug', 'cmake-build-release', '.git', '.vscode', '__pycache__']）
-- `--verbose`: 启用详细输出
+- `-vvv, --verbose`: 启用详细输出
 
 #### 支持的构建系统
 
