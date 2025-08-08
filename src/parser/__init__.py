@@ -1,25 +1,31 @@
 """
-C++ API Parser Package
+C++ Library Parser Package
+A modular and maintainable C++ header parser
 
-This package provides tools for parsing C++ libraries and extracting API information.
-It supports various build systems and can automatically detect compile flags.
-
-Modules:
-    api_parser: Main API parser class
-    build_system: Build system detection and compile flags extraction
-    ast_extractor: AST traversal and API information extraction
-    clang_utils: libclang utilities and configuration
-    config: Configuration settings
-    main: The main entry point for the parser    
+This package provides tools for parsing C++ header files and extracting
+API information including classes, functions, enums, and macros.
 """
 
-from .api_parser import APIParser
-from .main import parse_arguments
+from .models import (
+    Parameter, Function, EnumMember, Enum, Member, Class, Macro, APIDefinition
+)
+from .core import CppParser
+from .utils import TextProcessor, JSONSerializer
 
+__version__ = "2.0.0"
 __all__ = [
-    # Main classes
-    'APIParser',
-    
-    # Main functions
-    'parse_arguments',
+    # Models
+    'Parameter',
+    'Function', 
+    'EnumMember',
+    'Enum',
+    'Member',
+    'Class',
+    'Macro',
+    'APIDefinition',
+    # Core parser
+    'CppParser',
+    # Utilities
+    'TextProcessor',
+    'JSONSerializer'
 ]
