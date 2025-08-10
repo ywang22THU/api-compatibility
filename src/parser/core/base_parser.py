@@ -21,4 +21,8 @@ class BaseParser(ABC):
     
     def preprocess_content(self, content: str) -> str:
         """Common preprocessing steps"""
-        return self.text_processor.remove_comments(content)
+        # Remove comments first
+        content = self.text_processor.remove_comments(content)
+        # Remove preprocessor directives except #define
+        content = self.text_processor.remove_preprocessor_directives(content)
+        return content

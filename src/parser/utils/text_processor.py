@@ -19,6 +19,24 @@ class TextProcessor:
         return content
     
     @staticmethod
+    def remove_preprocessor_directives(content: str) -> str:
+        """Remove preprocessor directives except #define macros"""
+        # Remove #include directives
+        content = re.sub(r'^\s*#include\s+[<"][^>"]*[>"].*?$', '', content, flags=re.MULTILINE)
+        
+        # Remove #pragma directives
+        content = re.sub(r'^\s*#pragma\s+.*?$', '', content, flags=re.MULTILINE)
+        
+        # Remove conditional compilation directives but keep the content
+        # This removes #if, #ifdef, #ifndef, #else, #elif, #endif
+        content = re.sub(r'^\s*#(?:if|ifdef|ifndef|else|elif|endif)(?:\s+.*?)?$', '', content, flags=re.MULTILINE)
+        
+        # Remove other preprocessor directives (except #define)
+        content = re.sub(r'^\s*#(?!define)[a-zA-Z_][a-zA-Z0-9_]*.*?$', '', content, flags=re.MULTILINE)
+        
+        return content
+    
+    @staticmethod
     def extract_balanced_braces(content: str, start_pos: int) -> tuple[str, int]:
         """
         Extract content within balanced braces starting from position
