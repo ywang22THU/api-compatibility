@@ -52,7 +52,7 @@ class CppParser(BaseParser):
             dirs[:] = [d for d in dirs if d not in exclude_dirs]
             
             for file in files:
-                if file.endswith(('.h', '.hpp', '.hxx')):
+                if file.endswith(('.h', '.hpp', '.hxx')) and not file.endswith('_p.h'):
                     file_path = os.path.join(root, file)
                     try:
                         api_def = self.parse_file(file_path)

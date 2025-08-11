@@ -6,8 +6,25 @@
 
 该项目提供了两个主要工具：
 
-1. lib_parse.py - C++头文件解析器，使用libclang解析C++代码并提取API信息
-2. api_compatibility_analyzer.py - API兼容性分析器，比较两个版本的API并生成兼容性报告
+1. **lib_parse.py** - C++头文件解析器，使用正则表达式解析C++代码并提取API信息
+2. **api_compatibility_analyzer.py** - API兼容性分析器，比较两个版本的API并生成兼容性报告
+
+## 项目结构
+
+```
+src/
+├── lib_parse.py                    # C++头文件解析器主程序
+├── api_compatibility_analyzer.py   # API兼容性分析器主程序
+├── parser/                         # 解析器模块
+│   ├── core/                      # 核心解析器
+│   ├── models/                    # 数据模型
+│   └── utils/                     # 工具函数
+└── analyzer/                      # 兼容性分析器模块
+    ├── core/                      # 核心分析器
+    ├── checkers/                  # 专门检查器
+    ├── models/                    # 兼容性模型
+    └── utils/                     # 分析工具
+```
 
 ## 功能特性
 
