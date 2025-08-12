@@ -6,8 +6,8 @@
 
 该项目提供了两个主要工具：
 
-1. **lib_parse.py** - C++头文件解析器，使用正则表达式解析C++代码并提取API信息
-2. **api_compatibility_analyzer.py** - API兼容性分析器，比较两个版本的API并生成兼容性报告
+1. lib_parse.py - C++头文件解析器，使用正则表达式解析C++代码并提取API信息
+2. api_compatibility_analyzer.py - API兼容性分析器，比较两个版本的API并生成兼容性报告
 
 ## 项目结构
 
@@ -72,24 +72,8 @@ python src/lib_parse.py --root_path /path/to/cpp/library --exclude_dirs --output
 - `--root_path`: C++库的根目录路径，包含头文件（必需）
 - `--output_path`: 输出的JSON文件路径（默认：api_data.json）
 - `--exclude_dirs`: 要排除的目录名称列表（默认：['3rdparty', 'third_party', 'thirdparty', 'icons', 'tests', 'test', 'examples', 'example', 'docs', 'doc', 'build', 'cmake-build-debug', 'cmake-build-release', '.git', '.vscode', '__pycache__']）
+- `--max_workers`: 最大工作进程数，为 `0` 时则禁用并行（默认：CPU核心数）
 - `-vvv, --verbose`: 启用详细输出
-
-#### 支持的构建系统
-
-1. CMake项目
-   - 自动运行 `cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`
-   - 从 `compile_commands.json` 提取编译参数
-   - 支持指定构建目录和CMake参数
-
-2. Makefile项目  
-   - 运行 `make -n` 获取编译命令
-   - 解析Makefile中的CXXFLAGS、INCLUDES等变量
-   - 支持指定特定目标
-
-3. 自动检测
-   - 检查项目根目录中的 CMakeLists.txt 或 Makefile
-   - 自动选择合适的构建系统
-   - 支持多种构建系统（Gradle、Meson、Autotools等）
 
 ### 分析API兼容性
 
@@ -141,10 +125,3 @@ python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibilit
 | CRITICAL | 严重的行为变更 | 可能导致运行时错误 |
 | WARNING | 可能影响功能的变更 | 需要注意但不会立即失败 |
 | INFO | 信息性变更 | 通常是新增功能，向后兼容 |
-
-## 限制和注意事项
-
-1. 依赖libclang - 需要正确配置libclang环境
-2. 编译标志 - 可能需要根据项目调整编译标志
-3. 模板支持 - 对复杂模板的支持可能有限
-4. 宏展开 - 不会展开宏定义，可能影响解析结果

@@ -8,6 +8,7 @@ A modular and maintainable C++ header parser
 import os
 import sys
 import argparse
+from multiprocessing import cpu_count
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -53,6 +54,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
             'cmake-build-release', '.git', '.vscode', '__pycache__'
         ],
         help='Directories to exclude from parsing (default: common build/test directories). Use empty list to exclude nothing.'
+    )
+    
+    parser.add_argument(
+        '--max_workers',
+        type=int,
+        default=None,
+        help=f'Maximum number of worker processes for parallel parsing (default: {cpu_count()})'
     )
     
     parser.add_argument(
@@ -114,7 +122,11 @@ def main() -> None:
         cpp_parser = CppParser()
         
         # Parse directory
-        api_def = cpp_parser.parse_directory(args.root_path, args.exclude_dirs)
+        api_def = cpp_parser.parse_directory(
+            dir_path=args.root_path, 
+            exclude_dirs=args.exclude_dirs,
+            max_workers=args.max_workers,
+        )
         
         # Save to file using JSONSerializer
         JSONSerializer.save_to_file(api_def, args.output_path)

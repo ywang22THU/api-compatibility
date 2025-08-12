@@ -4,11 +4,26 @@ Main C++ parser that coordinates all specialized parsers
 
 import os
 from typing import List
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from multiprocessing import cpu_count
 from .base_parser import BaseParser
 from .macro_parser import MacroParser
 from .enum_parser import EnumParser
 from .class_parser import ClassParser
 from ..models import APIDefinition
+
+
+def _parse_single_file(file_path: str) -> APIDefinition:
+    """
+    Parse a single file - standalone function for multiprocessing
+    This function needs to be at module level for pickling
+    """
+    try:
+        parser = CppParser()
+        return parser.parse_file(file_path)
+    except Exception as e:
+        print(f"Warning: Failed to parse {file_path}: {e}")
+        return APIDefinition()
 
 
 class CppParser(BaseParser):
@@ -40,13 +55,23 @@ class CppParser(BaseParser):
         
         return api_def
     
-    def parse_directory(self, dir_path: str, exclude_dirs: List[str] = None) -> APIDefinition:
-        """Parse all header files in directory"""
+    def parse_directory(self, dir_path: str, exclude_dirs: List[str] = None, max_workers: int = None) -> APIDefinition:
+        """
+        Parse all header files in directory with optional parallel processing
+        
+        Args:
+            dir_path: Directory path to parse
+            exclude_dirs: List of directory names to exclude
+            max_workers: Maximum number of worker processes (default: CPU count)
+            use_parallel: Whether to use parallel processing (default: True)
+        """
         if exclude_dirs is None:
-            exclude_dirs = ['3rdparty', 'tests', 'icons', 'build', 'cmake', '.git', '__pycache__']
+            exclude_dirs = ['3rdparty', 'third_party', 'thirdparty', 'icons', 'tests', 'test', 
+                           'examples', 'example', 'docs', 'doc', 'build', 'cmake-build-debug', 
+                           'cmake-build-release', '.git', '.vscode', '__pycache__']
         
-        combined_api = APIDefinition()
-        
+        # Collect all header files
+        header_files = []
         for root, dirs, files in os.walk(dir_path):
             # Skip excluded directories
             dirs[:] = [d for d in dirs if d not in exclude_dirs]
@@ -54,11 +79,68 @@ class CppParser(BaseParser):
             for file in files:
                 if file.endswith(('.h', '.hpp', '.hxx')) and not file.endswith('_p.h'):
                     file_path = os.path.join(root, file)
+                    header_files.append(file_path)
+        
+        print(f"Found {len(header_files)} header files to parse")
+        
+        if max_workers == 0 or len(header_files) < 2:
+            # Sequential processing for small number of files or when parallel is disabled
+            return self._parse_files_sequential(header_files)
+        else:
+            # Parallel processing
+            return self._parse_files_parallel(header_files, max_workers)
+    
+    def _parse_files_sequential(self, file_paths: List[str]) -> APIDefinition:
+        """Parse files sequentially"""
+        combined_api = APIDefinition()
+        
+        for i, file_path in enumerate(file_paths, 1):
+            try:
+                print(f"Parsing [{i}/{len(file_paths)}]: {os.path.basename(file_path)}")
+                api_def = self.parse_file(file_path)
+                self._merge_api_definitions(combined_api, api_def)
+            except Exception as e:
+                print(f"Warning: Failed to parse {file_path}: {e}")
+        
+        return combined_api
+    
+    def _parse_files_parallel(self, file_paths: List[str], max_workers: int = None) -> APIDefinition:
+        """Parse files in parallel using ProcessPoolExecutor"""
+        if max_workers is None:
+            max_workers = min(cpu_count(), len(file_paths))
+        
+        print(f"Using {max_workers} worker processes for parallel parsing")
+        
+        combined_api = APIDefinition()
+        completed_count = 0
+        
+        try:
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                # Submit all tasks
+                future_to_file = {
+                    executor.submit(_parse_single_file, file_path): file_path 
+                    for file_path in file_paths
+                }
+                
+                # Process completed tasks as they finish
+                for future in as_completed(future_to_file):
+                    file_path = future_to_file[future]
+                    completed_count += 1
+                    
                     try:
-                        api_def = self.parse_file(file_path)
+                        api_def = future.result()
                         self._merge_api_definitions(combined_api, api_def)
+                        print(f"Completed [{completed_count}/{len(file_paths)}]: {os.path.basename(file_path)}")
                     except Exception as e:
                         print(f"Warning: Failed to parse {file_path}: {e}")
+        
+        except KeyboardInterrupt:
+            print("\nParsing interrupted by user")
+            raise
+        except Exception as e:
+            print(f"Error in parallel parsing: {e}")
+            print("Falling back to sequential parsing...")
+            return self._parse_files_sequential(file_paths)
         
         return combined_api
     
