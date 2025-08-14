@@ -125,3 +125,8 @@ python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibilit
 | CRITICAL | 严重的行为变更 | 可能导致运行时错误 |
 | WARNING | 可能影响功能的变更 | 需要注意但不会立即失败 |
 | INFO | 信息性变更 | 通常是新增功能，向后兼容 |
+
+
+## 许可证
+
+本项目采用 [MIT 许可证](LICENSE)
