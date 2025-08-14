@@ -107,9 +107,9 @@ class CppParser(BaseParser):
         
         return combined_api
     
-    def _parse_files_parallel(self, file_paths: List[str], max_workers: int = None) -> APIDefinition:
+    def _parse_files_parallel(self, file_paths: List[str], max_workers: int = 0) -> APIDefinition:
         """Parse files in parallel using ProcessPoolExecutor"""
-        if max_workers is None:
+        if max_workers == 0:
             max_workers = min(cpu_count(), len(file_paths))
         
         print(f"Using {max_workers} worker processes for parallel parsing")

@@ -17,6 +17,9 @@ class ClassParser(BaseParser):
     
     def parse(self, content: str, api_def: APIDefinition) -> None:
         """Parse class definitions from content"""
+        # First remove forward declarations to avoid parsing them
+        content = self._remove_forward_declarations(content)
+        
         # Match class definition (simplified)
         pattern = r'class\s+(final\s+)?(\w+)(?:\s*:\s*([^{]+))?\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}'
         
@@ -25,6 +28,10 @@ class ClassParser(BaseParser):
             name = match.group(2)
             inheritance = match.group(3)
             body = match.group(4)
+            
+            # Skip private classes (those with 'private' in name)
+            if self._is_private_class(name):
+                continue
             
             class_obj = Class(name=name, is_final=is_final)
             
@@ -47,6 +54,65 @@ class ClassParser(BaseParser):
             if base:
                 base_classes.append(base)
         return base_classes
+    
+    def _remove_forward_declarations(self, content: str) -> str:
+        """Remove forward class declarations to avoid parsing them"""
+        # Pattern to match forward declarations like:
+        # class ClassName;
+        # struct StructName;
+        # Also handle QT_FORWARD_DECLARE_CLASS and similar macros
+        forward_patterns = [
+            r'^\s*class\s+\w+\s*;\s*$',                    # class Name;
+            r'^\s*struct\s+\w+\s*;\s*$',                   # struct Name;
+            r'^\s*QT_FORWARD_DECLARE_CLASS\s*\(\s*\w+\s*\)\s*;\s*$',  # QT_FORWARD_DECLARE_CLASS(Name);
+            r'^\s*Q_DECLARE_METATYPE\s*\(\s*[^)]+\s*\)\s*;\s*$',      # Q_DECLARE_METATYPE declarations
+        ]
+        
+        lines = content.split('\n')
+        filtered_lines = []
+        
+        for line in lines:
+            is_forward_declaration = False
+            
+            for pattern in forward_patterns:
+                if re.match(pattern, line, re.MULTILINE):
+                    is_forward_declaration = True
+                    break
+            
+            if not is_forward_declaration:
+                filtered_lines.append(line)
+        
+        return '\n'.join(filtered_lines)
+    
+    def _is_private_class(self, class_name: str) -> bool:
+        """Check if a class should be considered private and excluded"""
+        private_indicators = [
+            'private',     # Contains 'private' directly
+            'Private',     # Contains 'Private' (Qt style)
+            'Internal',    # Internal classes
+            'Detail',      # Detail namespace classes
+            'Impl',        # Implementation classes
+            '_p',          # Private suffix pattern
+            '_impl',       # Implementation suffix
+            'Details',     # Details namespace
+        ]
+        
+        class_name_lower = class_name.lower()
+        
+        # Check if class name contains any private indicators
+        for indicator in private_indicators:
+            if indicator.lower() in class_name_lower:
+                return True
+        
+        # Check for specific naming patterns
+        if (class_name.endswith('Private') or 
+            class_name.endswith('Impl') or 
+            class_name.endswith('Internal') or
+            class_name.startswith('Q') and 'Private' in class_name or
+            '_' in class_name and ('private' in class_name_lower or 'impl' in class_name_lower)):
+            return True
+        
+        return False
     
     def _parse_class_body(self, body: str, class_obj: Class) -> None:
         """Parse class body content"""
