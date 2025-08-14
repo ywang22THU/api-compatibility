@@ -103,6 +103,7 @@ class CppParser(BaseParser):
                 self._merge_api_definitions(combined_api, api_def)
             except Exception as e:
                 print(f"Warning: Failed to parse {file_path}: {e}")
+                raise e
         
         return combined_api
     

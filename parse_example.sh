@@ -18,7 +18,6 @@ echo "========================================"
 
 python "$LIB_PARSE" \
     --root_path "$ROOT_DIR/test_lib/v1.0" \
-    --build_system make \
     --output_path "$ROOT_DIR/output/api_v1.json" \
     --verbose
 
@@ -28,8 +27,6 @@ echo "========================================"
 
 python "$LIB_PARSE" \
     --root_path "$ROOT_DIR/test_lib/v2.0" \
-    --build_system cmake \
-    --build_dir "$ROOT_DIR/test_lib/v2.0/build" \
     --output_path "$ROOT_DIR/output/api_v2.json" \
     --verbose
 

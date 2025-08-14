@@ -59,7 +59,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--max_workers',
         type=int,
-        default=None,
+        default=1,
         help=f'Maximum number of worker processes for parallel parsing (default: {cpu_count()})'
     )
     

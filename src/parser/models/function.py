@@ -21,6 +21,7 @@ class Function:
     is_pure_virtual: bool = False
     is_inline: bool = False
     is_extern: bool = False
+    access_level: str = "public"  # public, protected, private
     
     def signature(self) -> str:
         """Generate function signature"""
