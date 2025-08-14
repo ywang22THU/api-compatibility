@@ -66,32 +66,81 @@ class TextProcessor:
     
     @staticmethod
     def split_parameters(params_str: str) -> List[str]:
-        """Split parameter string respecting nested templates"""
+        """Split function parameters string into individual parameters"""
         if not params_str.strip():
             return []
         
-        params = []
+        parameters = []
         current_param = ""
         paren_count = 0
         angle_count = 0
+        in_string = False
+        escape_next = False
         
         for char in params_str:
-            if char == ',' and paren_count == 0 and angle_count == 0:
-                if current_param.strip():
-                    params.append(current_param.strip())
-                current_param = ""
-            else:
-                if char == '(':
-                    paren_count += 1
-                elif char == ')':
-                    paren_count -= 1
-                elif char == '<':
-                    angle_count += 1
-                elif char == '>':
-                    angle_count -= 1
+            if escape_next:
                 current_param += char
+                escape_next = False
+                continue
+            
+            if char == '\\':
+                escape_next = True
+                current_param += char
+                continue
+            
+            if char == '"' and not in_string:
+                in_string = True
+                current_param += char
+                continue
+            elif char == '"' and in_string:
+                in_string = False
+                current_param += char
+                continue
+            
+            if in_string:
+                current_param += char
+                continue
+            
+            if char == '(':
+                paren_count += 1
+            elif char == ')':
+                paren_count -= 1
+            elif char == '<':
+                angle_count += 1
+            elif char == '>':
+                angle_count -= 1
+            elif char == ',' and paren_count == 0 and angle_count == 0:
+                # Found a parameter separator
+                if current_param.strip():
+                    parameters.append(current_param.strip())
+                current_param = ""
+                continue
+            
+            current_param += char
         
+        # Add the last parameter
         if current_param.strip():
-            params.append(current_param.strip())
+            parameters.append(current_param.strip())
         
-        return params
+        return parameters
+    
+    @staticmethod
+    def normalize_whitespace(text: str) -> str:
+        """Normalize whitespace in text"""
+        # Replace multiple spaces with single space
+        text = re.sub(r'[ \t]+', ' ', text)
+        # Remove trailing/leading whitespace from lines
+        lines = [line.strip() for line in text.split('\n')]
+        return '\n'.join(lines)
+    
+    @staticmethod
+    def extract_string_literals(text: str) -> List[str]:
+        """Extract string literals from C++ code"""
+        pattern = r'"(?:[^"\\]|\\.)*"'
+        return re.findall(pattern, text)
+    
+    @staticmethod
+    def remove_string_literals(text: str) -> str:
+        """Remove string literals from C++ code"""
+        pattern = r'"(?:[^"\\]|\\.)*"'
+        return re.sub(pattern, '""', text)

@@ -10,6 +10,7 @@ from .base_parser import BaseParser
 from .macro_parser import MacroParser
 from .enum_parser import EnumParser
 from .class_parser import ClassParser
+from .function_parser import FunctionParser
 from ..models import APIDefinition
 
 
@@ -34,6 +35,7 @@ class CppParser(BaseParser):
         self.macro_parser = MacroParser()
         self.enum_parser = EnumParser()
         self.class_parser = ClassParser()
+        self.function_parser = FunctionParser()
         self.current_access_level = "private"
         self.namespace_stack = []
     
@@ -51,7 +53,7 @@ class CppParser(BaseParser):
         self.macro_parser.parse(content, api_def)
         self.enum_parser.parse(content, api_def)
         self.class_parser.parse(content, api_def)
-        self._parse_global_functions(content, api_def)
+        self.function_parser.parse(content, api_def)  # Now parses global functions
         
         return api_def
     
@@ -83,7 +85,7 @@ class CppParser(BaseParser):
         
         print(f"Found {len(header_files)} header files to parse")
         
-        if max_workers == 0 or len(header_files) < 2:
+        if max_workers <= 1 or len(header_files) < 2:
             # Sequential processing for small number of files or when parallel is disabled
             return self._parse_files_sequential(header_files)
         else:
@@ -147,11 +149,6 @@ class CppParser(BaseParser):
     def parse(self, content: str, api_def: APIDefinition) -> None:
         """Implementation of abstract method"""
         # This method is not used in the main parser
-        pass
-    
-    def _parse_global_functions(self, content: str, api_def: APIDefinition):
-        """Parse global functions (placeholder for future implementation)"""
-        # TODO: Implement global function parsing
         pass
     
     def _merge_api_definitions(self, target: APIDefinition, source: APIDefinition):
