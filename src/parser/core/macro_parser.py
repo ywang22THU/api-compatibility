@@ -12,24 +12,50 @@ class MacroParser(BaseParser):
     
     def parse(self, content: str, api_def: APIDefinition) -> None:
         """Parse macro definitions from content"""
-        # Pattern for #define macros with optional parameters and values
-        define_pattern = r'^\s*#define\s+(\w+)(?:\(([^)]*)\))?\s*(.*?)(?=\n|$)'
+        # Split content into lines to handle each #define separately
+        lines = content.split('\n')
         
-        for match in re.finditer(define_pattern, content, re.MULTILINE):
-            name = match.group(1)
-            params_str = match.group(2)
-            value = match.group(3).strip() if match.group(3) else None
-            
-            # Special handling for header guard macros and empty defines
-            if self._is_header_guard_or_empty_define(name, value):
-                # For header guards and empty defines, set value to None
-                value = None
+        for line in lines:
+            line = line.strip()
+            if not line.startswith('#define'):
+                continue
+                
+            # Parse each #define line individually
+            self._parse_define_line(line, api_def)
+    
+    def _parse_define_line(self, line: str, api_def: APIDefinition) -> None:
+        """Parse a single #define line"""
+        # Remove the #define prefix
+        line = line[7:].strip()  # Remove '#define'
+        
+        if not line:
+            return
+        
+        # Pattern for macro with parameters: NAME(params) value
+        param_match = re.match(r'^(\w+)\s*\(([^)]*)\)\s*(.*)', line)
+        if param_match:
+            name = param_match.group(1)
+            params_str = param_match.group(2)
+            value = param_match.group(3).strip() if param_match.group(3) else None
             
             parameters = []
             if params_str:
                 parameters = [p.strip() for p in params_str.split(',') if p.strip()]
             
             api_def.macros[name] = Macro(name=name, value=value, parameters=parameters)
+            return
+        
+        # Pattern for simple macro: NAME value (or just NAME)
+        simple_match = re.match(r'^(\w+)(?:\s+(.*))?$', line)
+        if simple_match:
+            name = simple_match.group(1)
+            value = simple_match.group(2).strip() if simple_match.group(2) else None
+            
+            # Special handling for header guard macros and empty defines
+            if self._is_header_guard_or_empty_define(name, value):
+                value = None
+            
+            api_def.macros[name] = Macro(name=name, value=value, parameters=[])
     
     def _is_header_guard_or_empty_define(self, name: str, value: str) -> bool:
         """Check if this is a header guard or empty define that should have no value"""
