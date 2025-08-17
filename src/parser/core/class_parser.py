@@ -178,6 +178,22 @@ class ClassParser(BaseParser):
             self._parse_q_property(class_obj, property_content, current_access)
             return True
         
+        # Handle Q_ENUM macro
+        # Q_ENUM(EnumName) -> marks enum for Qt meta-object system
+        enum_match = re.match(r'Q_ENUM\s*\(\s*(\w+)\s*\)', line)
+        if enum_match:
+            enum_name = enum_match.group(1)
+            self._handle_q_enum(class_obj, enum_name)
+            return True
+        
+        # Handle Q_FLAG macro
+        # Q_FLAG(FlagType) -> marks flag enum for Qt meta-object system
+        flag_match = re.match(r'Q_FLAG\s*\(\s*(\w+)\s*\)', line)
+        if flag_match:
+            flag_name = flag_match.group(1)
+            self._handle_q_flag(class_obj, flag_name)
+            return True
+        
         return False
     
     def _add_disabled_copy_members(self, class_obj: Class, class_name: str) -> None:
@@ -352,3 +368,16 @@ class ClassParser(BaseParser):
             'wchar_t', 'char16_t', 'char32_t'
         }
         return type_name in primitive_types
+    
+    def _handle_q_enum(self, class_obj: Class, enum_name: str) -> None:
+        """Handle Q_ENUM macro - marks enum for Qt meta-object system"""
+        # For now, we just record that this enum is Qt-registered
+        # In a more complete implementation, we might store this metadata
+        # or use it to validate that the enum exists in the class
+        pass
+    
+    def _handle_q_flag(self, class_obj: Class, flag_name: str) -> None:
+        """Handle Q_FLAG macro - marks flag enum for Qt meta-object system"""
+        # Similar to Q_ENUM, but for flag enums (bitwise operations)
+        # For now, we just record that this flag type is Qt-registered
+        pass
