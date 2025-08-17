@@ -17,3 +17,4 @@ class Class:
     members: List[Member] = field(default_factory=list)
     is_final: bool = False
     nested_classes: List['Class'] = field(default_factory=list)
+    export_macro: str = ""  # Q_XXX_EXPORT macro for public API classes

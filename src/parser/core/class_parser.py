@@ -20,20 +20,30 @@ class ClassParser(BaseParser):
         # First remove forward declarations to avoid parsing them
         content = self._remove_forward_declarations(content)
         
-        # Match class definition (simplified)
-        pattern = r'class\s+(final\s+)?(\w+)(?:\s*:\s*([^{]+))?\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}'
+        # Match class definition with optional Q_XXX_EXPORT macro
+        # Pattern: class Q_XXX_EXPORT ClassName : inheritance { body }
+        pattern = r'class\s+(Q_\w+_EXPORT\s+)?(final\s+)?(\w+)(?:\s*:\s*([^{]+))?\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}'
         
         for match in re.finditer(pattern, content, re.DOTALL):
-            is_final = match.group(1) is not None
-            name = match.group(2)
-            inheritance = match.group(3)
-            body = match.group(4)
+            export_macro = match.group(1)
+            is_final = match.group(2) is not None
+            name = match.group(3)
+            inheritance = match.group(4)
+            body = match.group(5)
+            
+            # Skip classes without Q_XXX_EXPORT macro (not public API)
+            if not export_macro:
+                continue
             
             # Skip private classes (those with 'private' in name)
             if self._is_private_class(name):
+                print("skip private class : {}".format(name))
                 continue
             
             class_obj = Class(name=name, is_final=is_final)
+            
+            # Store the export macro information
+            class_obj.export_macro = export_macro.strip()
             
             # Parse inheritance relationships
             if inheritance:
