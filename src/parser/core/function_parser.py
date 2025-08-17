@@ -49,31 +49,64 @@ class FunctionParser(BaseParser):
                 i += 1
                 continue
             
-            # Check if this might be a function declaration/definition
-            function_text, lines_consumed = self._extract_function_text(lines, i)
-            
-            if function_text:
-                func = self._parse_global_function(function_text)
-                if func:
-                    functions.append(func)
-            
-            i += lines_consumed if lines_consumed > 0 else 1
+            # Only try to parse if line looks like it could be a function
+            if self._could_be_function_line(line):
+                # Check if this might be a function declaration/definition
+                function_text, lines_consumed = self._extract_function_text(lines, i)
+                
+                if function_text:
+                    func = self._parse_global_function(function_text)
+                    if func:
+                        functions.append(func)
+                
+                i += lines_consumed if lines_consumed > 0 else 1
+            else:
+                i += 1
         
         return functions
     
     def _remove_class_definitions(self, content: str) -> str:
         """Remove class definitions to avoid parsing member functions"""
-        # Simple approach: remove everything between 'class Name {' and matching '}'
         result = []
         lines = content.split('\n')
         brace_count = 0
         in_class = False
+        in_namespace = False
+        namespace_brace_count = 0
         
         for line in lines:
             line_stripped = line.strip()
             
-            # Check for class declaration
-            if re.match(r'\s*class\s+\w+.*\{', line_stripped):
+            # Handle namespace blocks
+            if re.match(r'^\s*namespace\s+\w+\s*\{', line_stripped):
+                in_namespace = True
+                namespace_brace_count = line_stripped.count('{') - line_stripped.count('}')
+                result.append(line)
+                continue
+            
+            if in_namespace:
+                namespace_brace_count += line_stripped.count('{') - line_stripped.count('}')
+                if namespace_brace_count <= 0:
+                    in_namespace = False
+                    result.append(line)
+                    continue
+            
+            # Check for class declaration with optional Q_XXX_EXPORT macro
+            # Patterns: class Name {, class final Name {, class Q_XXX_EXPORT Name {, class Q_XXX_EXPORT final Name {
+            class_patterns = [
+                r'^\s*class\s+(Q_\w+_EXPORT\s+)?(final\s+)?\w+.*\{',  # class with optional export and final
+                r'^\s*struct\s+(Q_\w+_EXPORT\s+)?\w+.*\{',           # struct with optional export
+                r'^\s*class\s+(Q_\w+_EXPORT\s+)?(final\s+)?\w+\s*:.*\{',  # class with inheritance
+                r'^\s*struct\s+(Q_\w+_EXPORT\s+)?\w+\s*:.*\{',       # struct with inheritance
+            ]
+            
+            is_class_start = False
+            for pattern in class_patterns:
+                if re.match(pattern, line_stripped):
+                    is_class_start = True
+                    break
+            
+            if is_class_start:
                 in_class = True
                 brace_count = line_stripped.count('{') - line_stripped.count('}')
                 continue
@@ -84,6 +117,7 @@ class FunctionParser(BaseParser):
                     in_class = False
                 continue
             
+            # Only add line if not inside a class
             if not in_class:
                 result.append(line)
         
@@ -102,13 +136,72 @@ class FunctionParser(BaseParser):
             r'^\s*class\s+\w+\s*;',      # forward class declarations
             r'^\s*\}',                   # closing braces
             r'^\s*\{',                   # opening braces
+            r'^\s*#',                    # preprocessor directives
+            r'^\s*//',                   # comment lines
+            r'^\s*/\*',                  # comment block starts
+            r'^\s*\*/',                  # comment block ends
+            r'^\s*\*',                   # comment block middle
+            r'^\s*;',                    # empty statements
+            r'^\s*$',                    # empty lines
+            r'^\s*Q_DECLARE_',           # Qt declare macros
+            r'^\s*Q_OBJECT\s*$',         # Q_OBJECT macro
+            r'^\s*Q_GADGET\s*$',         # Q_GADGET macro
+            r'^\s*Q_INTERFACE\s*\(',     # Q_INTERFACE macro
+            r'^\s*public\s*:',           # access specifiers
+            r'^\s*private\s*:',          # access specifiers
+            r'^\s*protected\s*:',        # access specifiers
+            r'^\s*signals\s*:',          # Qt signals
+            r'^\s*slots\s*:',            # Qt slots
+            r'^\s*Q_SIGNALS\s*:',        # Qt Q_SIGNALS
+            r'^\s*Q_SLOTS\s*:',          # Qt Q_SLOTS
         ]
+        
+        # Check if line contains only operators or special characters
+        if re.match(r'^\s*[{}();,=\[\]<>!&|+\-*/%^~?:]*\s*$', line):
+            return True
+        
+        # Check if line is a variable declaration (contains = but not function-like)
+        if '=' in line and '(' not in line and not re.search(r'\w+\s*\([^)]*\)', line):
+            return True
         
         for pattern in skip_patterns:
             if re.match(pattern, line):
                 return True
         
         return False
+    
+    def _could_be_function_line(self, line: str) -> bool:
+        """Check if line could potentially be the start of a function"""
+        # Must contain parentheses to be a function
+        if '(' not in line:
+            return False
+        
+        # Skip obvious non-functions
+        if any(keyword in line for keyword in ['if', 'while', 'for', 'switch', 'catch', 'sizeof']):
+            return False
+        
+        # Skip macro calls (usually uppercase)
+        if re.match(r'^\s*[A-Z_][A-Z0-9_]*\s*\(', line):
+            return False
+        
+        # Skip Qt-specific macros
+        qt_macros = ['Q_OBJECT', 'Q_GADGET', 'Q_DECLARE_', 'Q_PROPERTY', 'Q_CLASSINFO', 
+                    'Q_INTERFACES', 'Q_ENUMS', 'Q_FLAGS', 'Q_EMIT', 'Q_FOREVER']
+        if any(macro in line for macro in qt_macros):
+            return False
+        
+        # Skip constructor calls or casts
+        if re.match(r'^\s*\w+\s*\(.*\)\s*[;,]?\s*$', line) and not re.search(r'\w+\s+\w+\s*\(', line):
+            return False
+        
+        # Basic function pattern: should have return_type function_name(params)
+        # Look for pattern: word(s) followed by word followed by (
+        if re.search(r'\w+\s+\w+\s*\(', line):
+            return True
+        
+        # Could be continuation of previous line
+        return True
+    
     
     def _extract_function_text(self, lines: List[str], start_idx: int) -> tuple[str, int]:
         """Extract complete function declaration/definition text"""
@@ -158,6 +251,10 @@ class FunctionParser(BaseParser):
         if not function_text or '(' not in function_text:
             return None
         
+        # Additional validation - skip obvious non-functions
+        if self._is_definitely_not_function(function_text):
+            return None
+        
         # Extract modifiers
         modifiers = self._extract_global_function_modifiers(function_text)
         
@@ -187,6 +284,10 @@ class FunctionParser(BaseParser):
         if function_name.startswith('~') or return_type == function_name:
             return None
         
+        # Additional validation for function name
+        if not self._is_valid_function_name(function_name):
+            return None
+        
         # Parse parameters
         parameters = self._parse_parameters(params_str)
         
@@ -197,6 +298,51 @@ class FunctionParser(BaseParser):
             access_level="public",  # Global functions are always public
             **modifiers
         )
+    
+    def _is_definitely_not_function(self, text: str) -> bool:
+        """Check if text is definitely not a function"""
+        # Convert to single line for easier checking
+        line = re.sub(r'\s+', ' ', text).strip()
+        
+        # Skip variable declarations with initialization
+        if re.match(r'^.*\w+\s*=\s*.*$', line) and not re.search(r'\w+\s*\([^)]*\)\s*=', line):
+            return True
+        
+        # Skip array declarations
+        if re.search(r'\[\s*\]', line):
+            return True
+        
+        # Skip pointer declarations without function signature
+        if '*' in line and not re.search(r'\w+\s*\([^)]*\)', line):
+            return True
+        
+        # Skip obvious control flow statements
+        control_keywords = ['if', 'while', 'for', 'switch', 'do', 'catch', 'try']
+        if any(f'\\b{keyword}\\b' for keyword in control_keywords if re.search(f'\\b{keyword}\\b', line)):
+            return True
+        
+        return False
+    
+    def _is_valid_function_name(self, name: str) -> bool:
+        """Check if name is a valid function name"""
+        # Must be valid C++ identifier
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', name):
+            return False
+        
+        # Skip C++ keywords
+        cpp_keywords = [
+            'auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do',
+            'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if',
+            'int', 'long', 'register', 'return', 'short', 'signed', 'sizeof',
+            'static', 'struct', 'switch', 'typedef', 'union', 'unsigned', 'void',
+            'volatile', 'while', 'class', 'public', 'private', 'protected',
+            'virtual', 'inline', 'friend', 'new', 'delete', 'this', 'operator'
+        ]
+        
+        if name in cpp_keywords:
+            return False
+        
+        return True
     
     def _extract_global_function_modifiers(self, function_text: str) -> dict:
         """Extract function modifiers for global functions"""

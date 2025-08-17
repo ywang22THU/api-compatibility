@@ -98,7 +98,6 @@ def print_results(api_def, args: argparse.Namespace) -> None:
         print(f"Found {len(api_def.classes)} classes")
         print(f"Found {len(api_def.enums)} enums") 
         print(f"Found {len(api_def.macros)} macros")
-        print(f"Found {len(api_def.functions)} global functions")
         print(f"API data saved to: {args.output_path}")
     else:
         print(f"Analysis complete. API data saved to: {args.output_path}")

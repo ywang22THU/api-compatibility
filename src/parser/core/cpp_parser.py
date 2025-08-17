@@ -35,7 +35,6 @@ class CppParser(BaseParser):
         self.macro_parser = MacroParser()
         self.enum_parser = EnumParser()
         self.class_parser = ClassParser()
-        self.function_parser = FunctionParser()
         self.current_access_level = "private"
         self.namespace_stack = []
     
@@ -53,7 +52,6 @@ class CppParser(BaseParser):
         self.macro_parser.parse(content, api_def)
         self.enum_parser.parse(content, api_def)
         self.class_parser.parse(content, api_def)
-        self.function_parser.parse(content, api_def)  # Now parses global functions
         
         return api_def
     
@@ -155,7 +153,6 @@ class CppParser(BaseParser):
     def _merge_api_definitions(self, target: APIDefinition, source: APIDefinition):
         """Merge two API definitions"""
         target.classes.update(source.classes)
-        target.functions.update(source.functions)
         target.enums.update(source.enums)
         target.macros.update(source.macros)
         target.constants.update(source.constants)

@@ -30,7 +30,7 @@ class CompatibilityChecker:
         
         # Run all checkers and collect issues
         self.issues.extend(self.class_checker.check(old_api, new_api))
-        self.issues.extend(self.function_checker.check(old_api, new_api))
+        # self.issues.extend(self.function_checker.check(old_api, new_api))
         self.issues.extend(self.enum_checker.check(old_api, new_api))
         self.issues.extend(self.macro_checker.check(old_api, new_api))
         
