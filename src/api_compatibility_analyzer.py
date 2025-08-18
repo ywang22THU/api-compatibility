@@ -6,12 +6,33 @@ A refactored, modular and maintainable API compatibility analyzer
 import os
 import sys
 import argparse
+import logging
 from pathlib import Path
 
 # Add current directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
 from analyzer import CompatibilityChecker, load_api_from_json, ReportGenerator
+
+
+def setup_logging(verbose: bool = False) -> None:
+    """Setup logging configuration"""
+    level = logging.DEBUG if verbose else logging.INFO
+    
+    # Configure logging format
+    formatter = logging.Formatter('%(levelname)s: %(message)s')
+    
+    # Setup console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    
+    # Configure root logger
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    logger.addHandler(console_handler)
+    
+    # Prevent duplicate logs
+    logger.propagate = False
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -66,13 +87,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
 def validate_arguments(args: argparse.Namespace) -> None:
     """Validate command line arguments"""
+    logger = logging.getLogger(__name__)
+    
     for api_file in [args.old_api, args.new_api]:
         if not os.path.exists(api_file):
-            print(f"Error: API file does not exist: {api_file}")
+            logger.error(f"API file does not exist: {api_file}")
             sys.exit(1)
         
         if not api_file.endswith('.json'):
-            print(f"Warning: Expected JSON file, got: {api_file}")
+            logger.warning(f"Expected JSON file, got: {api_file}")
 
 
 def main() -> None:
@@ -81,48 +104,48 @@ def main() -> None:
     parser = create_argument_parser()
     args = parser.parse_args()
     
+    # Setup logging based on verbose flag
+    setup_logging(args.verbose)
+    logger = logging.getLogger(__name__)
+    
     # Validate arguments
     validate_arguments(args)
     
     try:
         # Load API definitions
-        if args.verbose:
-            print(f"Loading old API from: {args.old_api}")
+        logger.debug(f"Loading old API from: {args.old_api}")
         old_api = load_api_from_json(args.old_api)
         
-        if args.verbose:
-            print(f"Loading new API from: {args.new_api}")
+        logger.debug(f"Loading new API from: {args.new_api}")
         new_api = load_api_from_json(args.new_api)
         
         # Perform compatibility check
-        if args.verbose:
-            print("Performing compatibility analysis...")
+        logger.debug("Performing compatibility analysis...")
         
         checker = CompatibilityChecker()
         issues = checker.check_compatibility(old_api, new_api)
         summary = checker.generate_summary()
         incompatibility_score = checker.calculate_incompatibility_score()
         
-        # Print summary information
-        print(f"Analysis complete. Found {summary['total_issues']} issues.")
-        print(f"Incompatibility: {incompatibility_score.incompatibility_percentage:.1f}%")
+        # Log summary information
+        logger.info(f"Analysis complete. Found {summary['total_issues']} issues.")
+        logger.info(f"Incompatibility: {incompatibility_score.incompatibility_percentage:.1f}%")
         
-        # Print detailed old API breakage information in verbose mode
-        if args.verbose:
-            print("\n" + "="*60)
-            print("OLD API BREAKAGE ANALYSIS")
-            print("="*60)
-            print(f"Total old API elements: {incompatibility_score.old_api_count}")
-            print(f"Broken old API elements: {incompatibility_score.broken_old_api_count}")
-            print(f"Old API breakage percentage: {incompatibility_score.old_api_breakage_percentage:.2f}%")
-                
-            # Show breakdown of what types of elements are broken
-            broken_elements = checker._get_broken_old_api_breakdown()
-            if broken_elements:
-                print(f"\nBroken API breakdown:")
-                for element_type, count in broken_elements.items():
-                    print(f"  - {element_type.title()}: {count}")
-            print("="*60)
+        # Log detailed old API breakage information in debug mode
+        logger.debug("="*60)
+        logger.debug("OLD API BREAKAGE ANALYSIS")
+        logger.debug("="*60)
+        logger.debug(f"Total old API elements: {incompatibility_score.old_api_count}")
+        logger.debug(f"Broken old API elements: {incompatibility_score.broken_old_api_count}")
+        logger.debug(f"Old API breakage percentage: {incompatibility_score.old_api_breakage_percentage:.2f}%")
+            
+        # Show breakdown of what types of elements are broken
+        broken_elements = checker._get_broken_old_api_breakdown()
+        if broken_elements:
+            logger.debug("Broken API breakdown:")
+            for element_type, count in broken_elements.items():
+                logger.debug(f"  - {element_type.title()}: {count}")
+        logger.debug("="*60)
         
         # Generate report
         if args.format == 'json':
@@ -134,15 +157,12 @@ def main() -> None:
         if args.output:
             with open(args.output, 'w', encoding='utf-8') as f:
                 f.write(output_content)
-            print(f"Report saved to: {args.output}")
+            logger.info(f"Report saved to: {args.output}")
         else:
-            print("\n" + output_content)
+            print(output_content)  # Keep stdout output for report content
             
     except Exception as e:
-        print(f"Error during analysis: {e}")
-        if args.verbose:
-            import traceback
-            traceback.print_exc()
+        logger.exception(f"Error during analysis: {e}")
         sys.exit(1)
 
 

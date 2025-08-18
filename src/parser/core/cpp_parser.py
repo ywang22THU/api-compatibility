@@ -3,6 +3,7 @@ Main C++ parser that coordinates all specialized parsers
 """
 
 import os
+import logging
 from typing import List
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import cpu_count
@@ -19,11 +20,12 @@ def _parse_single_file(file_path: str) -> APIDefinition:
     Parse a single file - standalone function for multiprocessing
     This function needs to be at module level for pickling
     """
+    logger = logging.getLogger(__name__)
     try:
         parser = CppParser()
         return parser.parse_file(file_path)
     except Exception as e:
-        print(f"Warning: Failed to parse {file_path}: {e}")
+        logger.warning(f"Failed to parse {file_path}: {e}")
         return APIDefinition()
 
 
@@ -92,25 +94,28 @@ class CppParser(BaseParser):
     
     def _parse_files_sequential(self, file_paths: List[str]) -> APIDefinition:
         """Parse files sequentially"""
+        logger = logging.getLogger(__name__)
         combined_api = APIDefinition()
         
         for i, file_path in enumerate(file_paths, 1):
             try:
-                print(f"Parsing [{i}/{len(file_paths)}]: {os.path.basename(file_path)}")
+                logger.debug(f"Parsing [{i}/{len(file_paths)}]: {os.path.basename(file_path)}")
                 api_def = self.parse_file(file_path)
                 self._merge_api_definitions(combined_api, api_def)
             except Exception as e:
-                print(f"Warning: Failed to parse {file_path}: {e}")
+                logger.warning(f"Failed to parse {file_path}: {e}")
                 raise e
         
         return combined_api
     
     def _parse_files_parallel(self, file_paths: List[str], max_workers: int = 0) -> APIDefinition:
         """Parse files in parallel using ProcessPoolExecutor"""
+        logger = logging.getLogger(__name__)
+        
         if max_workers == 0:
             max_workers = min(cpu_count(), len(file_paths))
         
-        print(f"Using {max_workers} worker processes for parallel parsing")
+        logger.debug(f"Using {max_workers} worker processes for parallel parsing")
         
         combined_api = APIDefinition()
         completed_count = 0
@@ -131,16 +136,15 @@ class CppParser(BaseParser):
                     try:
                         api_def = future.result()
                         self._merge_api_definitions(combined_api, api_def)
-                        print(f"Completed [{completed_count}/{len(file_paths)}]: {os.path.basename(file_path)}")
+                        logger.debug(f"Completed [{completed_count}/{len(file_paths)}]: {os.path.basename(file_path)}")
                     except Exception as e:
-                        print(f"Warning: Failed to parse {file_path}: {e}")
+                        logger.warning(f"Failed to parse {file_path}: {e}")
         
         except KeyboardInterrupt:
-            print("\nParsing interrupted by user")
-            raise
+            logger.info("Parsing interrupted by user")
         except Exception as e:
-            print(f"Error in parallel parsing: {e}")
-            print("Falling back to sequential parsing...")
+            logger.error(f"Error in parallel parsing: {e}")
+            logger.info("Falling back to sequential parsing...")
             return self._parse_files_sequential(file_paths)
         
         return combined_api

@@ -37,7 +37,6 @@ class ClassParser(BaseParser):
             
             # Skip private classes (those with 'private' in name)
             if self._is_private_class(name):
-                print("skip private class : {}".format(name))
                 continue
             
             class_obj = Class(name=name, is_final=is_final)

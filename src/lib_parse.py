@@ -8,11 +8,32 @@ A modular and maintainable C++ header parser
 import os
 import sys
 import argparse
+import logging
 from multiprocessing import cpu_count
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from parser import CppParser, JSONSerializer
+
+
+def setup_logging(verbose: bool = False) -> None:
+    """Setup logging configuration"""
+    level = logging.DEBUG if verbose else logging.INFO
+    
+    # Configure logging format
+    formatter = logging.Formatter('%(levelname)s: %(message)s')
+    
+    # Setup console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    
+    # Configure root logger
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    logger.addHandler(console_handler)
+    
+    # Prevent duplicate logs
+    logger.propagate = False
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -74,33 +95,34 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
 def validate_arguments(args: argparse.Namespace) -> None:
     """Validate command line arguments"""
+    logger = logging.getLogger(__name__)
+    
     if not os.path.exists(args.root_path):
-        print(f"Error: Root path does not exist: {args.root_path}")
+        logger.error(f"Root path does not exist: {args.root_path}")
         sys.exit(1)
     
     if not os.path.isdir(args.root_path):
-        print(f"Error: Root path is not a directory: {args.root_path}")
+        logger.error(f"Root path is not a directory: {args.root_path}")
         sys.exit(1)
 
 
-def print_verbose_info(args: argparse.Namespace) -> None:
-    """Print verbose information about parsing parameters"""
-    print(f"Parsing C++ headers in: {args.root_path}")
+def log_verbose_info(args: argparse.Namespace) -> None:
+    """Log verbose information about parsing parameters"""
+    logger = logging.getLogger(__name__)
+    logger.debug(f"Parsing C++ headers in: {args.root_path}")
     if args.exclude_dirs:
-        print(f"Excluding directories: {', '.join(args.exclude_dirs)}")
+        logger.debug(f"Excluding directories: {', '.join(args.exclude_dirs)}")
     else:
-        print("No directories excluded")
+        logger.debug("No directories excluded")
 
 
-def print_results(api_def, args: argparse.Namespace) -> None:
-    """Print parsing results"""
-    if args.verbose:
-        print(f"Found {len(api_def.classes)} classes")
-        print(f"Found {len(api_def.enums)} enums") 
-        print(f"Found {len(api_def.macros)} macros")
-        print(f"API data saved to: {args.output_path}")
-    else:
-        print(f"Analysis complete. API data saved to: {args.output_path}")
+def log_results(api_def, args: argparse.Namespace) -> None:
+    """Log parsing results"""
+    logger = logging.getLogger(__name__)
+    logger.debug(f"Found {len(api_def.classes)} classes")
+    logger.debug(f"Found {len(api_def.enums)} enums") 
+    logger.debug(f"Found {len(api_def.macros)} macros")
+    logger.info(f"Analysis complete. API data saved to: {args.output_path}")
 
 
 def main() -> None:
@@ -109,12 +131,15 @@ def main() -> None:
     arg_parser = create_argument_parser()
     args = arg_parser.parse_args()
     
+    # Setup logging based on verbose flag
+    setup_logging(args.verbose)
+    logger = logging.getLogger(__name__)
+    
     # Validate arguments
     validate_arguments(args)
     
-    # Print verbose info if requested
-    if args.verbose:
-        print_verbose_info(args)
+    # Log verbose info if requested
+    log_verbose_info(args)
     
     # Initialize parser and process
     try:
@@ -130,14 +155,11 @@ def main() -> None:
         # Save to file using JSONSerializer
         JSONSerializer.save_to_file(api_def, args.output_path)
         
-        # Print results
-        print_results(api_def, args)
+        # Log results
+        log_results(api_def, args)
             
     except Exception as e:
-        print(f"Error during parsing: {e}")
-        if args.verbose:
-            import traceback
-            traceback.print_exc()
+        logger.exception(f"Error during parsing: {e}")
         sys.exit(1)
 
 

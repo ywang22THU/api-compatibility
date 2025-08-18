@@ -38,6 +38,15 @@ class ReportGenerator:
             report.append(f"  Incompatibility Percentage: {incompatibility_score.incompatibility_percentage:.1f}%")
             report.append("")
             
+            # Old API Breakage Analysis
+            if incompatibility_score.old_api_count > 0:
+                report.append("OLD API BREAKAGE ANALYSIS:")
+                report.append("-" * 27)
+                report.append(f"  Total Old API Elements: {incompatibility_score.old_api_count}")
+                report.append(f"  Broken Old API Elements: {incompatibility_score.broken_old_api_count}")
+                report.append(f"  Old API Breakage Rate: {incompatibility_score.old_api_breakage_percentage:.2f}%")
+                report.append("")
+            
             report.append("ISSUE BREAKDOWN:")
             report.append("-" * 16)
             report.append(f"  ERROR (Compilation Breaking): {incompatibility_score.error_count}")
