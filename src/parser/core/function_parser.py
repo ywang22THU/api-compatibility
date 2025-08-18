@@ -355,7 +355,8 @@ class FunctionParser(BaseParser):
             'is_final': False,    # Global functions can't be final
             'is_pure_virtual': False,  # Global functions can't be pure virtual
             'is_inline': 'inline' in function_text,
-            'is_extern': 'extern' in function_text
+            'is_extern': 'extern' in function_text,
+            'is_constexpr': 'constexpr' in function_text
         }
     
     def _clean_global_function_text(self, function_text: str) -> str:
@@ -363,9 +364,12 @@ class FunctionParser(BaseParser):
         clean_text = function_text
         
         # Remove common modifiers
-        modifiers_to_remove = ['static', 'inline', 'extern', 'noexcept']
+        modifiers_to_remove = ['static', 'inline', 'extern', 'noexcept', 'constexpr']
         for modifier in modifiers_to_remove:
             clean_text = re.sub(r'\b' + modifier + r'\b', '', clean_text)
+        
+        # Remove C++ attributes
+        clean_text = re.sub(r'\[\[.*?\]\]', '', clean_text)
         
         # Remove extra whitespace
         clean_text = re.sub(r'\s+', ' ', clean_text).strip()
@@ -381,12 +385,14 @@ class FunctionParser(BaseParser):
         modifiers = self._extract_modifiers(line)
         # Remove modifiers, Qt macros, and attributes for parsing
         clean_line = line
-        # Remove standard modifiers
-        modifiers_to_remove = ['virtual', 'static', 'override', 'final', 'const', 'noexcept', 'inline', 'extern']
+        # Remove standard modifiers (including constexpr)
+        modifiers_to_remove = ['virtual', 'static', 'override', 'final', 'const', 'noexcept', 'inline', 'extern', 'constexpr']
         for modifier in modifiers_to_remove:
-            clean_line = clean_line.replace(modifier, '')
-        # Remove C++ attributes
+            clean_line = re.sub(r'\b' + modifier + r'\b', '', clean_line)
+        
+        # Remove C++ attributes like [[nodiscard]], [[deprecated]], etc.
         clean_line = re.sub(r'\[\[.*?\]\]', '', clean_line)
+        
         # Remove Qt macros and deprecated markers
         qt_macros = [
             'Q_DECL_EXPORT', 'Q_DECL_DEPRECATED', 'Q_DECL_CONSTEXPR', 'Q_DECL_NOEXCEPT',
@@ -394,7 +400,10 @@ class FunctionParser(BaseParser):
             'QT_DEPRECATED', 'Q_REQUIRED_RESULT', 'Q_MAYBE_UNUSED', 'Q_NODISCARD'
         ]
         for macro in qt_macros:
-            clean_line = clean_line.replace(macro, '')
+            clean_line = re.sub(r'\b' + macro + r'\b', '', clean_line)
+        
+        # Clean up extra whitespace
+        clean_line = re.sub(r'\s+', ' ', clean_line).strip()
         clean_line = clean_line.replace('= 0', '').strip()
         # Match function pattern: return_type function_name(parameter_list)
         pattern = r'(.*?)\s+(\w+)\s*\(([^)]*)\)'
@@ -426,15 +435,22 @@ class FunctionParser(BaseParser):
             'is_pure_virtual': line.endswith('= 0'),
             'is_inline': 'inline' in line,
             'is_extern': 'extern' in line,
+            'is_constexpr': 'constexpr' in line,
             'is_deprecated': 'QT_DEPRECATED' in line or 'Q_DECL_DEPRECATED' in line
         }
     
     def _clean_line_for_parsing(self, line: str) -> str:
         """Remove modifiers from line for easier parsing"""
         clean_line = line
-        modifiers_to_remove = ['virtual', 'static', 'override', 'final', 'const', 'noexcept', 'inline', 'extern']
+        modifiers_to_remove = ['virtual', 'static', 'override', 'final', 'const', 'noexcept', 'inline', 'extern', 'constexpr']
         for modifier in modifiers_to_remove:
-            clean_line = clean_line.replace(modifier, '')
+            clean_line = re.sub(r'\b' + modifier + r'\b', '', clean_line)
+        
+        # Remove C++ attributes
+        clean_line = re.sub(r'\[\[.*?\]\]', '', clean_line)
+        
+        # Clean up and remove pure virtual marker
+        clean_line = re.sub(r'\s+', ' ', clean_line).strip()
         clean_line = clean_line.replace('= 0', '').strip()
         return clean_line
     

@@ -21,6 +21,7 @@ class Function:
     is_pure_virtual: bool = False
     is_inline: bool = False
     is_extern: bool = False
+    is_constexpr: bool = False
     is_constructor: bool = False
     is_destructor: bool = False
     is_deleted: bool = False
@@ -47,6 +48,8 @@ class Function:
             prefixes.append("inline")
         if self.is_extern:
             prefixes.append("extern")
+        if self.is_constexpr:
+            prefixes.append("constexpr")
 
         prefix_str = " ".join(prefixes)
         
