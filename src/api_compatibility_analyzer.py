@@ -105,8 +105,24 @@ def main() -> None:
         
         # Print summary information
         print(f"Analysis complete. Found {summary['total_issues']} issues.")
-        print(f"Risk Level: {incompatibility_score.risk_level}")
         print(f"Incompatibility: {incompatibility_score.incompatibility_percentage:.1f}%")
+        
+        # Print detailed old API breakage information in verbose mode
+        if args.verbose:
+            print("\n" + "="*60)
+            print("OLD API BREAKAGE ANALYSIS")
+            print("="*60)
+            print(f"Total old API elements: {incompatibility_score.old_api_count}")
+            print(f"Broken old API elements: {incompatibility_score.broken_old_api_count}")
+            print(f"Old API breakage percentage: {incompatibility_score.old_api_breakage_percentage:.2f}%")
+                
+            # Show breakdown of what types of elements are broken
+            broken_elements = checker._get_broken_old_api_breakdown()
+            if broken_elements:
+                print(f"\nBroken API breakdown:")
+                for element_type, count in broken_elements.items():
+                    print(f"  - {element_type.title()}: {count}")
+            print("="*60)
         
         # Generate report
         if args.format == 'json':

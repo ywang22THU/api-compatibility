@@ -34,7 +34,6 @@ class ReportGenerator:
         if incompatibility_score:
             report.append("INCOMPATIBILITY ASSESSMENT:")
             report.append("-" * 30)
-            report.append(f"  Risk Level: {incompatibility_score.risk_level}")
             report.append(f"  Incompatibility Score: {incompatibility_score.total_score:.1f}/{incompatibility_score.max_possible_score:.1f}")
             report.append(f"  Incompatibility Percentage: {incompatibility_score.incompatibility_percentage:.1f}%")
             report.append("")

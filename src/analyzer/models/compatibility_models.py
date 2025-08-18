@@ -105,24 +105,31 @@ class IncompatibilityScore:
     total_score: float
     max_possible_score: float
     incompatibility_percentage: float
-    risk_level: str
     total_issues: int
     error_count: int
     critical_count: int
     warning_count: int
     info_count: int
+    # New fields for old API compatibility assessment
+    old_api_count: int = 0  # Total number of APIs in old version
+    broken_old_api_count: int = 0  # Number of old APIs affected by ERROR level changes
+    old_api_breakage_percentage: float = 0.0  # Percentage of old APIs that are broken
     
     def to_dict(self) -> dict:
         return {
             'total_score': self.total_score,
             'max_possible_score': self.max_possible_score,
             'incompatibility_percentage': self.incompatibility_percentage,
-            'risk_level': self.risk_level,
             'total_issues': self.total_issues,
             'breakdown': {
                 'error': self.error_count,
                 'critical': self.critical_count,
                 'warning': self.warning_count,
                 'info': self.info_count
+            },
+            'old_api_compatibility': {
+                'total_old_apis': self.old_api_count,
+                'broken_old_apis': self.broken_old_api_count,
+                'breakage_percentage': self.old_api_breakage_percentage
             }
         }
