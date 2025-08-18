@@ -7,3 +7,4 @@ __pycache__/
 qt*/
 *.zip
 *test.sh
+test_lib*/
