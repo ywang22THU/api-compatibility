@@ -6,3 +6,5 @@ __pycache__/
 *.tar.gz
 qt*/
 *.zip
+*test.sh
+test_lib*/

@@ -2,12 +2,43 @@
 
 这是一个用于分析C++ API版本间兼容性的工具集，可以解析C++头文件并生成详细的兼容性分析报告。
 
+## 环境要求
+
+### Python版本
+- websocketsPython 3.7 或更高版本websockets（推荐 Python 3.8+）
+
+### 依赖说明
+本项目websockets仅使用Python标准库websockets，无需安装任何第三方依赖包。
+
+#### 特殊说明
+如果使用 websocketsPython 3.6 或更早版本websockets，需要额外安装 `dataclasses` 包：
+```bash
+pip install dataclasses
+```
+
 ## 项目简介
 
 该项目提供了两个主要工具：
 
-1. lib_parse.py - C++头文件解析器，使用libclang解析C++代码并提取API信息
+1. lib_parse.py - C++头文件解析器，使用正则表达式解析C++代码并提取API信息
 2. api_compatibility_analyzer.py - API兼容性分析器，比较两个版本的API并生成兼容性报告
+
+## 项目结构
+
+```
+src/
+├── lib_parse.py                    # C++头文件解析器主程序
+├── api_compatibility_analyzer.py   # API兼容性分析器主程序
+├── parser/                         # 解析器模块
+│   ├── core/                      # 核心解析器
+│   ├── models/                    # 数据模型
+│   └── utils/                     # 工具函数
+└── analyzer/                      # 兼容性分析器模块
+    ├── core/                      # 核心分析器
+    ├── checkers/                  # 专门检查器
+    ├── models/                    # 兼容性模型
+    └── utils/                     # 分析工具
+```
 
 ## 功能特性
 
@@ -39,22 +70,6 @@
 python src/lib_parse.py --root_path /path/to/cpp/library --output_path api_v1.json
 ```
 
-#### 自动检测构建系统
-```bash
-python src/lib_parse.py --root_path /path/to/cpp/library --build_system auto --output_path api_v1.json
-
-# 使用CMake
-python src/lib_parse.py --root_path /path/to/cpp/library --build_system cmake --build_dir build --output_path api_v1.json
-
-# 使用Make
-python src/lib_parse.py --root_path /path/to/cpp/library --build_system make --target all --output_path api_v1.json
-```
-
-#### 手动指定编译参数
-```bash
-python src/lib_parse.py --root_path /path/to/cpp/library --build_system manual --compile_flags -std=c++17 -I /usr/include/custom -DDEBUG
-```
-
 #### 排除特定目录
 ```bash
 # 使用默认排除目录（3rdparty, tests, icons等）
@@ -70,30 +85,9 @@ python src/lib_parse.py --root_path /path/to/cpp/library --exclude_dirs --output
 参数说明：
 - `--root_path`: C++库的根目录路径，包含头文件（必需）
 - `--output_path`: 输出的JSON文件路径（默认：api_data.json）
-- `--build_system`: 构建系统类型，支持 `auto`（默认）、`cmake`、`make`、`manual`
-- `--build_dir`: 构建目录，用于CMake项目（默认：{root_path}/build）
-- `--target`: 特定目标，用于Make/CMake项目
-- `--cmake_args`: 额外的CMake参数
-- `--compile_flags`: 手动编译标志（当build_system为manual时有效）
 - `--exclude_dirs`: 要排除的目录名称列表（默认：['3rdparty', 'third_party', 'thirdparty', 'icons', 'tests', 'test', 'examples', 'example', 'docs', 'doc', 'build', 'cmake-build-debug', 'cmake-build-release', '.git', '.vscode', '__pycache__']）
-- `--verbose`: 启用详细输出
-
-#### 支持的构建系统
-
-1. CMake项目
-   - 自动运行 `cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`
-   - 从 `compile_commands.json` 提取编译参数
-   - 支持指定构建目录和CMake参数
-
-2. Makefile项目  
-   - 运行 `make -n` 获取编译命令
-   - 解析Makefile中的CXXFLAGS、INCLUDES等变量
-   - 支持指定特定目标
-
-3. 自动检测
-   - 检查项目根目录中的 CMakeLists.txt 或 Makefile
-   - 自动选择合适的构建系统
-   - 支持多种构建系统（Gradle、Meson、Autotools等）
+- `--max_workers`: 最大工作进程数，为 `0` 时则禁用并行（默认：CPU核心数）
+- `-vvv, --verbose`: 启用详细输出
 
 ### 分析API兼容性
 
@@ -109,11 +103,14 @@ python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibilit
 
 ## 支持的兼容性检查
 
-### 文件级别
-- 头文件删除
-- 头文件新增
+### 宏
+
+- 宏增加
+- 宏删除
+- 宏值改变
 
 ### 枚举类型
+
 - 枚举删除
 - 枚举新增
 - 枚举值删除
@@ -121,21 +118,18 @@ python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibilit
 - 枚举值新增
 
 ### 类
+
 - 类删除
 - 类新增
-- 基类删除/新增
-- 成员变量删除/新增/类型变更
+- 基类删除 / 新增
+- `final` 标识符删除 / 新增
+- 成员变量删除 / 新增 / 类型变更
 - 成员变量访问权限变更
-- 成员函数删除/新增
+- 成员函数删除 / 新增
 - 成员函数返回类型变更
 - 成员函数异常规范变更
 - 成员函数虚函数属性变更
 - 成员函数访问权限变更
-
-### 全局函数
-- 函数删除
-- 函数新增
-- 函数返回类型变更
 
 ## 兼容性等级说明
 
@@ -146,9 +140,13 @@ python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibilit
 | WARNING | 可能影响功能的变更 | 需要注意但不会立即失败 |
 | INFO | 信息性变更 | 通常是新增功能，向后兼容 |
 
-## 限制和注意事项
+## 日志和调试
 
-1. 依赖libclang - 需要正确配置libclang环境
-2. 编译标志 - 可能需要根据项目调整编译标志
-3. 模板支持 - 对复杂模板的支持可能有限
-4. 宏展开 - 不会展开宏定义，可能影响解析结果
+### 日志级别
+- 使用 `--verbose` 参数启用调试日志
+- 不带 `--verbose` 时只显示基本信息日志
+- 错误和异常会自动记录到日志中
+
+## 许可证
+
+本项目采用 [MIT 许可证](LICENSE)
