@@ -2,6 +2,20 @@
 
 这是一个用于分析C++ API版本间兼容性的工具集，可以解析C++头文件并生成详细的兼容性分析报告。
 
+## 环境要求
+
+### Python版本
+- websocketsPython 3.7 或更高版本websockets（推荐 Python 3.8+）
+
+### 依赖说明
+本项目websockets仅使用Python标准库websockets，无需安装任何第三方依赖包。
+
+#### 特殊说明
+如果使用 websocketsPython 3.6 或更早版本websockets，需要额外安装 `dataclasses` 包：
+```bash
+pip install dataclasses
+```
+
 ## 项目简介
 
 该项目提供了两个主要工具：
@@ -89,11 +103,14 @@ python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibilit
 
 ## 支持的兼容性检查
 
-### 文件级别
-- 头文件删除
-- 头文件新增
+### 宏
+
+- 宏增加
+- 宏删除
+- 宏值改变
 
 ### 枚举类型
+
 - 枚举删除
 - 枚举新增
 - 枚举值删除
@@ -101,21 +118,18 @@ python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibilit
 - 枚举值新增
 
 ### 类
+
 - 类删除
 - 类新增
-- 基类删除/新增
-- 成员变量删除/新增/类型变更
+- 基类删除 / 新增
+- `final` 标识符删除 / 新增
+- 成员变量删除 / 新增 / 类型变更
 - 成员变量访问权限变更
-- 成员函数删除/新增
+- 成员函数删除 / 新增
 - 成员函数返回类型变更
 - 成员函数异常规范变更
 - 成员函数虚函数属性变更
 - 成员函数访问权限变更
-
-### 全局函数
-- 函数删除
-- 函数新增
-- 函数返回类型变更
 
 ## 兼容性等级说明
 
@@ -126,6 +140,12 @@ python src/api_compatibility_analyzer.py api_v1.json api_v2.json -o compatibilit
 | WARNING | 可能影响功能的变更 | 需要注意但不会立即失败 |
 | INFO | 信息性变更 | 通常是新增功能，向后兼容 |
 
+## 日志和调试
+
+### 日志级别
+- 使用 `--verbose` 参数启用调试日志
+- 不带 `--verbose` 时只显示基本信息日志
+- 错误和异常会自动记录到日志中
 
 ## 许可证
 
