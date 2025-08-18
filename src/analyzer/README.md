@@ -13,8 +13,7 @@ analyzer/
 ├── checkers/                   # 专门的兼容性检查器
 │   ├── __init__.py
 │   ├── base_checker.py        # 检查器基类
-│   ├── class_checker.py       # 类兼容性检查器
-│   ├── function_checker.py    # 函数兼容性检查器
+│   ├── class_checker.py       # 类兼容性检查器（包含函数兼容性检查）
 │   ├── enum_checker.py        # 枚举兼容性检查器
 │   └── macro_checker.py       # 宏兼容性检查器
 ├── models/                     # 数据模型

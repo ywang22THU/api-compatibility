@@ -52,6 +52,17 @@ class ClassChecker(BaseChecker):
         
         return base_level
     
+    def _calculate_adjusted_severity_score(self, change_type: ChangeType, old_method: Function = None, context: dict = None) -> float:
+        """Calculate severity score with deprecated function adjustment"""
+        level = self._get_severity_level(change_type, context)
+        base_score = level.severity_score
+        
+        # Apply 0.5 multiplier for deprecated functions
+        if old_method and getattr(old_method, 'is_deprecated', False):
+            return base_score * 0.5
+        
+        return base_score
+    
     def check(self, old_api: APIDefinition, new_api: APIDefinition) -> List[CompatibilityIssue]:
         """Check class compatibility"""
         self.issues = []
@@ -138,9 +149,11 @@ class ClassChecker(BaseChecker):
             method = old_methods[removed_method]
             if method.access_level == "public":  # Only care about public interfaces
                 level = self._get_severity_level(ChangeType.FUNCTION_REMOVED)
+                score = self._calculate_adjusted_severity_score(ChangeType.FUNCTION_REMOVED, method)
                 self.issues.append(CompatibilityIssue(
                     change_type=ChangeType.FUNCTION_REMOVED,
                     level=level,
+                    severity_score=score,
                     old_signature=method.signature(),
                     description=f"Method '{removed_method}' has been removed",
                     element_name=f"{class_name}::{removed_method}" if class_name else removed_method,
@@ -176,9 +189,11 @@ class ClassChecker(BaseChecker):
         # Check return type
         if old_method.return_type != new_method.return_type:
             level = self._get_severity_level(ChangeType.FUNCTION_RETURN_TYPE_CHANGED)
+            score = self._calculate_adjusted_severity_score(ChangeType.FUNCTION_RETURN_TYPE_CHANGED, old_method)
             self.issues.append(CompatibilityIssue(
                 change_type=ChangeType.FUNCTION_RETURN_TYPE_CHANGED,
                 level=level,
+                severity_score=score,
                 old_signature=old_method.signature(),
                 new_signature=new_method.signature(),
                 description=f"Method '{method_name}' return type changed from '{old_method.return_type}' to '{new_method.return_type}'",
@@ -200,9 +215,11 @@ class ClassChecker(BaseChecker):
         # Check parameter count changes
         if len(old_params) > len(new_params):
             level = self._get_severity_level(ChangeType.FUNCTION_PARAMETER_REMOVED)
+            score = self._calculate_adjusted_severity_score(ChangeType.FUNCTION_PARAMETER_REMOVED, old_method)
             self.issues.append(CompatibilityIssue(
                 change_type=ChangeType.FUNCTION_PARAMETER_REMOVED,
                 level=level,
+                severity_score=score,
                 old_signature=old_method.signature(),
                 new_signature=new_method.signature(),
                 description=f"Method '{old_method.name}' has fewer parameters",
@@ -216,6 +233,8 @@ class ClassChecker(BaseChecker):
             
             level = self._get_severity_level(ChangeType.FUNCTION_PARAMETER_ADDED, 
                                            {'has_default_values': has_defaults})
+            score = self._calculate_adjusted_severity_score(ChangeType.FUNCTION_PARAMETER_ADDED, old_method,
+                                                           {'has_default_values': has_defaults})
             
             if new_required_params:
                 description = f"Method '{old_method.name}' added required parameters"
@@ -225,6 +244,7 @@ class ClassChecker(BaseChecker):
             self.issues.append(CompatibilityIssue(
                 change_type=ChangeType.FUNCTION_PARAMETER_ADDED,
                 level=level,
+                severity_score=score,
                 old_signature=old_method.signature(),
                 new_signature=new_method.signature(),
                 description=description,
@@ -240,9 +260,11 @@ class ClassChecker(BaseChecker):
             
             if old_param.type != new_param.type:
                 level = self._get_severity_level(ChangeType.FUNCTION_PARAMETER_TYPE_CHANGED)
+                score = self._calculate_adjusted_severity_score(ChangeType.FUNCTION_PARAMETER_TYPE_CHANGED, old_method)
                 self.issues.append(CompatibilityIssue(
                     change_type=ChangeType.FUNCTION_PARAMETER_TYPE_CHANGED,
                     level=level,
+                    severity_score=score,
                     old_signature=str(old_param),
                     new_signature=str(new_param),
                     description=f"Method '{old_method.name}' parameter '{old_param.name}' type changed from '{old_param.type}' to '{new_param.type}'",
@@ -266,9 +288,11 @@ class ClassChecker(BaseChecker):
             
             if old_value != new_value:
                 level = self._get_severity_level(ChangeType.FUNCTION_MODIFIER_CHANGED)
+                score = self._calculate_adjusted_severity_score(ChangeType.FUNCTION_MODIFIER_CHANGED, old_method)
                 self.issues.append(CompatibilityIssue(
                     change_type=ChangeType.FUNCTION_MODIFIER_CHANGED,
                     level=level,
+                    severity_score=score,
                     old_signature=old_method.signature(),
                     new_signature=new_method.signature(),
                     description=f"Method '{old_method.name}' {modifier_name} modifier changed",

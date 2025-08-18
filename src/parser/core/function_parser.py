@@ -373,32 +373,39 @@ class FunctionParser(BaseParser):
         return clean_text
     
     def parse_method(self, line: str, access_level: str) -> Optional[Function]:
-        """Parse method definition from a single line"""
+        """Parse method definition from a single line, removing Qt/C++ macros and attributes"""
         line = line.strip().rstrip(';')
-        
         if not line or line.startswith('//'):
             return None
-        
         # Check modifiers
         modifiers = self._extract_modifiers(line)
-        
-        # Remove modifiers for parsing
-        clean_line = self._clean_line_for_parsing(line)
-        
+        # Remove modifiers, Qt macros, and attributes for parsing
+        clean_line = line
+        # Remove standard modifiers
+        modifiers_to_remove = ['virtual', 'static', 'override', 'final', 'const', 'noexcept', 'inline', 'extern']
+        for modifier in modifiers_to_remove:
+            clean_line = clean_line.replace(modifier, '')
+        # Remove C++ attributes
+        clean_line = re.sub(r'\[\[.*?\]\]', '', clean_line)
+        # Remove Qt macros and deprecated markers
+        qt_macros = [
+            'Q_DECL_EXPORT', 'Q_DECL_DEPRECATED', 'Q_DECL_CONSTEXPR', 'Q_DECL_NOEXCEPT',
+            'Q_DECL_OVERRIDE', 'Q_DECL_FINAL', 'Q_DECL_INLINE', 'Q_DECL_NOTHROW',
+            'QT_DEPRECATED', 'Q_REQUIRED_RESULT', 'Q_MAYBE_UNUSED', 'Q_NODISCARD'
+        ]
+        for macro in qt_macros:
+            clean_line = clean_line.replace(macro, '')
+        clean_line = clean_line.replace('= 0', '').strip()
         # Match function pattern: return_type function_name(parameter_list)
         pattern = r'(.*?)\s+(\w+)\s*\(([^)]*)\)'
         match = re.match(pattern, clean_line)
-        
         if not match:
             return None
-        
         return_type = match.group(1).strip()
         function_name = match.group(2)
         params_str = match.group(3)
-        
         # Parse parameters
         parameters = self._parse_parameters(params_str)
-        
         return Function(
             name=function_name,
             return_type=return_type,
@@ -408,7 +415,7 @@ class FunctionParser(BaseParser):
         )
     
     def _extract_modifiers(self, line: str) -> dict:
-        """Extract function modifiers from line"""
+        """Extract function modifiers from line, including deprecated marker"""
         return {
             'is_virtual': 'virtual' in line,
             'is_static': 'static' in line,
@@ -418,7 +425,8 @@ class FunctionParser(BaseParser):
             'is_final': 'final' in line,
             'is_pure_virtual': line.endswith('= 0'),
             'is_inline': 'inline' in line,
-            'is_extern': 'extern' in line
+            'is_extern': 'extern' in line,
+            'is_deprecated': 'QT_DEPRECATED' in line or 'Q_DECL_DEPRECATED' in line
         }
     
     def _clean_line_for_parsing(self, line: str) -> str:

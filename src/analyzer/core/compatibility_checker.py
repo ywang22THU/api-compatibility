@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from parser import APIDefinition
 
 from ..models.compatibility_models import CompatibilityIssue, IncompatibilityScore, CompatibilityLevel
-from ..checkers import ClassChecker, FunctionChecker, EnumChecker, MacroChecker
+from ..checkers import ClassChecker, EnumChecker, MacroChecker
 
 
 class CompatibilityChecker:
@@ -20,7 +20,6 @@ class CompatibilityChecker:
     def __init__(self):
         self.issues: List[CompatibilityIssue] = []
         self.class_checker = ClassChecker()
-        self.function_checker = FunctionChecker()
         self.enum_checker = EnumChecker()
         self.macro_checker = MacroChecker()
     
@@ -30,7 +29,6 @@ class CompatibilityChecker:
         
         # Run all checkers and collect issues
         self.issues.extend(self.class_checker.check(old_api, new_api))
-        # self.issues.extend(self.function_checker.check(old_api, new_api))
         self.issues.extend(self.enum_checker.check(old_api, new_api))
         self.issues.extend(self.macro_checker.check(old_api, new_api))
         
@@ -46,7 +44,7 @@ class CompatibilityChecker:
         
         # Count issues by severity and calculate score
         for issue in self.issues:
-            total_score += issue.level.severity_score
+            total_score += issue.effective_severity_score
             if issue.level == CompatibilityLevel.ERROR:
                 error_count += 1
             elif issue.level == CompatibilityLevel.CRITICAL:

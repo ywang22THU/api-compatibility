@@ -24,6 +24,7 @@ class Function:
     is_constructor: bool = False
     is_destructor: bool = False
     is_deleted: bool = False
+    is_deprecated: bool = False
     access_level: str = "public"  # public, protected, private, signals, slots
     
     def signature(self) -> str:

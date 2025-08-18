@@ -19,9 +19,9 @@ class CompatibilityLevel(PyEnum):
         """Get severity score for incompatibility calculation"""
         scores = {
             CompatibilityLevel.ERROR: 10,
-            CompatibilityLevel.CRITICAL: 7, 
-            CompatibilityLevel.WARNING: 3,
-            CompatibilityLevel.INFO: 1
+            CompatibilityLevel.CRITICAL: 5, 
+            CompatibilityLevel.WARNING: 1,
+            CompatibilityLevel.INFO: 0
         }
         return scores[self]
     
@@ -78,13 +78,19 @@ class CompatibilityIssue:
     description: str = ""
     element_name: str = ""
     element_type: str = ""  # class, function, enum, macro
+    severity_score: Optional[float] = None  # Custom severity score, overrides level.severity_score
+    
+    @property
+    def effective_severity_score(self) -> float:
+        """Get effective severity score (custom or default from level)"""
+        return self.severity_score if self.severity_score is not None else self.level.severity_score
     
     def to_dict(self) -> dict:
         return {
             'change_type': self.change_type.value,
             'level': self.level.value,
             'level_description': self.level.description,
-            'severity_score': self.level.severity_score,
+            'severity_score': self.effective_severity_score,
             'old_signature': self.old_signature,
             'new_signature': self.new_signature,
             'description': self.description,
