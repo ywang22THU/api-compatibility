@@ -80,7 +80,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--path_patterns',
         nargs='*',
-        default=None,
+        default='*',
         help='Regex patterns to match specific directory paths (e.g., "qt/*/src" to match qt/any/src). If specified, only matching paths will be parsed.'
     )
     
