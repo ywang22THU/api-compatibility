@@ -78,6 +78,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
     )
     
     parser.add_argument(
+        '--path_patterns',
+        nargs='*',
+        default=None,
+        help='Regex patterns to match specific directory paths (e.g., "qt/*/src" to match qt/any/src). If specified, only matching paths will be parsed.'
+    )
+    
+    parser.add_argument(
         '--max_workers',
         type=int,
         default=1,
@@ -145,10 +152,18 @@ def main() -> None:
     try:
         cpp_parser = CppParser()
         
+        # Log parsing configuration
+        logger.info(f"Parsing directory: {args.root_path}")
+        if args.path_patterns:
+            logger.info(f"Using path patterns: {args.path_patterns}")
+        else:
+            logger.info(f"Excluding directories: {args.exclude_dirs}")
+        
         # Parse directory
         api_def = cpp_parser.parse_directory(
             dir_path=args.root_path, 
             exclude_dirs=args.exclude_dirs,
+            path_patterns=args.path_patterns,
             max_workers=args.max_workers,
         )
         
