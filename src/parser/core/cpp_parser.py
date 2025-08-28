@@ -3,8 +3,9 @@ Main C++ parser that coordinates all specialized parsers
 """
 
 import os
+import re
 import logging
-from typing import List
+from typing import List, Optional
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import cpu_count
 from .base_parser import BaseParser
@@ -57,15 +58,16 @@ class CppParser(BaseParser):
         
         return api_def
     
-    def parse_directory(self, dir_path: str, exclude_dirs: List[str] = None, max_workers: int = None) -> APIDefinition:
+    def parse_directory(self, dir_path: str, exclude_dirs: List[str] = None, 
+                       path_patterns: Optional[List[str]] = None, max_workers: int = None) -> APIDefinition:
         """
         Parse all header files in directory with optional parallel processing
         
         Args:
             dir_path: Directory path to parse
-            exclude_dirs: List of directory names to exclude
+            exclude_dirs: List of directory names to exclude (ignored if path_patterns is used)
+            path_patterns: List of regex patterns to match directory paths (e.g., ['qt/*/src'])
             max_workers: Maximum number of worker processes (default: CPU count)
-            use_parallel: Whether to use parallel processing (default: True)
         """
         if exclude_dirs is None:
             exclude_dirs = ['3rdparty', 'third_party', 'thirdparty', 'icons', 'tests', 'test', 
@@ -73,6 +75,20 @@ class CppParser(BaseParser):
                            'cmake-build-release', '.git', '.vscode', '__pycache__']
         
         # Collect all header files
+        header_files = self._find_files_by_patterns(dir_path, path_patterns, exclude_dirs)
+        
+        logger = logging.getLogger(__name__)
+        logger.info(f"Found {len(header_files)} header files to parse")
+        
+        if max_workers <= 1 or len(header_files) < 2:
+            # Sequential processing for small number of files or when parallel is disabled
+            return self._parse_files_sequential(header_files)
+        else:
+            # Parallel processing
+            return self._parse_files_parallel(header_files, max_workers)
+    
+    def _find_files_by_exclusion(self, dir_path: str, exclude_dirs: List[str]) -> List[str]:
+        """Find header files using directory exclusion (original method)"""
         header_files = []
         for root, dirs, files in os.walk(dir_path):
             # Skip excluded directories
@@ -82,15 +98,55 @@ class CppParser(BaseParser):
                 if file.endswith(('.h', '.hpp', '.hxx')) and not file.endswith('_p.h'):
                     file_path = os.path.join(root, file)
                     header_files.append(file_path)
+        return header_files
+
+    def _find_files_by_patterns(self, dir_path: str, path_patterns: List[str], exclude_dirs: List[str]) -> List[str]:
+        """Find header files using regex path patterns"""
+        header_files = []
+        logger = logging.getLogger(__name__)
         
-        print(f"Found {len(header_files)} header files to parse")
+        # Convert glob-like patterns to regex patterns
+        regex_patterns = []
+        for pattern in path_patterns:
+            # Convert common glob patterns to regex
+            # Replace * with [^/\\]* (match any character except path separator)
+            # Replace ** with .* (match any character including path separator)
+            regex_pattern = pattern.replace('**', '___DOUBLE_STAR___')
+            regex_pattern = regex_pattern.replace('*', '[^/\\\\]*')
+            regex_pattern = regex_pattern.replace('___DOUBLE_STAR___', '.*')
+            
+            regex_patterns.append(re.compile(regex_pattern, re.IGNORECASE))
+            logger.debug(f"Converted pattern '{pattern}' to regex: {regex_pattern}")
         
-        if max_workers <= 1 or len(header_files) < 2:
-            # Sequential processing for small number of files or when parallel is disabled
-            return self._parse_files_sequential(header_files)
-        else:
-            # Parallel processing
-            return self._parse_files_parallel(header_files, max_workers)
+        # Walk through all directories and match patterns
+        for root, dirs, files in os.walk(dir_path):
+            dirs[:] = [d for d in dirs if d not in exclude_dirs]
+            
+            # Get relative path from dir_path
+            rel_path = os.path.relpath(root, dir_path)
+            if rel_path == '.':
+                rel_path = ''
+            
+            # Normalize path separators for matching
+            normalized_path = rel_path.replace('\\', '/')
+            
+            # Check if this directory matches any pattern
+            matches_pattern = False
+            for regex_pattern in regex_patterns:
+                if regex_pattern.search(normalized_path) or regex_pattern.search(rel_path):
+                    matches_pattern = True
+                    logger.debug(f"Path '{normalized_path}' matches pattern")
+                    break
+            
+            if matches_pattern:
+                # Add header files from this directory
+                for file in files:
+                    if file.endswith(('.h', '.hpp', '.hxx')) and not file.endswith('_p.h'):
+                        file_path = os.path.join(root, file)
+                        header_files.append(file_path)
+                        logger.debug(f"Added file: {file_path}")
+        
+        return header_files
     
     def _parse_files_sequential(self, file_paths: List[str]) -> APIDefinition:
         """Parse files sequentially"""
